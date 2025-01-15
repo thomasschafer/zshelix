@@ -28,6 +28,8 @@ function helix-mode-handler() {
                     ((CURSOR--))
                     BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
                 fi
+            elif [[ $KEYS == $'\r' ]]; then  # Enter
+                zle accept-line
             else
                 BUFFER="${BUFFER:0:$CURSOR}$KEYS${BUFFER:$CURSOR}"
                 ((CURSOR++))
@@ -37,6 +39,16 @@ function helix-mode-handler() {
     
     zle redisplay
 }
+
+precmd() {
+    if [[ $HELIX_MODE == "INSERT" ]]; then
+        print -n '\e[6 q'  # Bar cursor
+    else
+        print -n '\e[2 q'  # Block cursor
+    fi
+}
+
+
 # Register with ZLE
 zle -N helix-mode-handler
 
