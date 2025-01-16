@@ -6,6 +6,32 @@ typeset -g ZHM_MODE_INSERT="INSERT"
 typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
 typeset -g ZHM_MODE
 
+# -1 means no selection
+typeset -g ZHM_ANCHOR=-1  # -1 means selection is just cursor
+
+function zhm_reset_anchor() {
+    ZHM_ANCHOR=$CURSOR
+    zhm_remove_highlight
+}
+
+function zhm_highlight_selection() {
+    if ((ZHM_ANCHOR >= 0)); then
+        if ((CURSOR >= ZHM_ANCHOR)); then
+            # Going forward: highlight from anchor to cursor inclusive
+            region_highlight=("${ZHM_ANCHOR} $((CURSOR + 1)) standout")
+        else
+            # Going backward: highlight from cursor to anchor inclusive
+            region_highlight=("${CURSOR} $((ZHM_ANCHOR + 1)) standout")
+        fi
+    else
+        zhm_remove_highlight
+    fi
+}
+
+function zhm_remove_highlight() {
+    region_highlight=()
+}
+
 function zhm_safe_cursor_move() {
     local new_pos=$1
     if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
@@ -16,11 +42,14 @@ function zhm_safe_cursor_move() {
 }
 
 function zhm_switch_to_insert_mode() {
+    zhm_remove_highlight
     ZHM_MODE=$ZHM_MODE_INSERT
     print -n $ZHM_CURSOR_INSERT
 }
 
 function zhm_switch_to_normal_mode() {
+    ZHM_ANCHOR=$CURSOR
+    zhm_highlight_selection
     ZHM_MODE=$ZHM_MODE_NORMAL
     print -n $ZHM_CURSOR_NORMAL
 }
@@ -93,12 +122,14 @@ function zhm_forward_word_insert() {
     CURSOR=$pos
 }
 
+function zhm_sign() {
+  local num=$1
+  echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
+}
 
 function zhm_find_word_boundary() {
-    local direction=$1
-    local boundary=$2
-    local word_type=$3
-    local pos=$CURSOR
+    local motion=$1    # next_word | next_end | prev_word
+    local word_type=$2 # word | WORD
     local len=$#BUFFER
 
     local pattern is_match
@@ -113,144 +144,153 @@ function zhm_find_word_boundary() {
         return 1
     fi
 
-    if [[ $direction == "next" ]]; then
-        if [[ $boundary == "start" ]]; then
-            # Skip current word
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
-            # Skip non-word chars
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if ! eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
-        elif [[ $boundary == "end" ]]; then
-            # Move at least one position forward if we're at the end of a word
-            if ((pos < len)); then
-                local char="${BUFFER:$pos:1}"
-                if eval $is_match; then
-                    ((pos++))
-                fi
-            fi
-            # Skip non-word chars
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if ! eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
-            # Skip to end of word
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
-            # Move back one to land on last char
-            if ((pos > CURSOR)); then
-                ((pos--))
-            fi
-        else
-            echo "Invalid boundary: $boundary" >&2
-            return 1
-        fi
-    elif [[ $direction == "prev" ]]; then
-        if [[ $boundary == "start" ]]; then
-            # If on word char, move back one
-            if ((pos > 0)); then
-                local char="${BUFFER:$((pos-1)):1}"
-                if eval $is_match; then
-                    ((pos--))
-                fi
-            fi
-            # Skip non-word chars
-            while ((pos > 0)); do
-                local char="${BUFFER:$((pos-1)):1}"
-                if ! eval $is_match; then
-                    ((pos--))
-                else
-                    break
-                fi
-            done
-            # Skip word chars
-            while ((pos > 0)); do
-                local char="${BUFFER:$((pos-1)):1}"
-                if eval $is_match; then
-                    ((pos--))
-                else
-                    break
-                fi
-            done
-        elif [[ $boundary == "end" ]]; then
-            echo "Backward end motion not implemented" >&2
-            return 1
-        else
-            echo "Invalid boundary: $boundary" >&2
-            return 1
-        fi
-    else
-        echo "Invalid direction: $direction" >&2
-        return 1
-    fi
+    local prev_cursor=$CURSOR
+    local prev_anchor=$ZHM_ANCHOR
+    local pos=$CURSOR
 
-    zhm_safe_cursor_move $pos
+    case $motion in
+        "next_word")
+            while ((pos < len)); do
+                local char="${BUFFER:$pos:1}"
+                if ! eval $is_match; then
+                    ((pos++))
+                else
+                    break
+                fi
+            done
+
+            while ((pos < len)); do
+                local char="${BUFFER:$pos:1}"
+                if eval $is_match; then
+                    ((pos++))
+                else
+                    break
+                fi
+            done
+            ;;
+
+        "next_end")
+            if ((pos < len)); then
+                ((pos++))
+            fi
+
+            while ((pos < len)); do
+                local char="${BUFFER:$pos:1}"
+                if ! eval $is_match; then
+                    ((pos++))
+                else
+                    break
+                fi
+            done
+
+            while ((pos < len)); do
+                local char="${BUFFER:$pos:1}"
+                if eval $is_match; then
+                    ((pos++))
+                else
+                    break
+                fi
+            done
+
+            # Move back one to land on last char
+            ((pos--))
+            ;;
+
+        "prev_word")
+            while ((pos > 0)); do
+                local char="${BUFFER:$((pos-1)):1}"
+                if ! eval $is_match; then
+                    ((pos--))
+                else
+                    break
+                fi
+            done
+
+            while ((pos > 0)); do
+                local char="${BUFFER:$((pos-1)):1}"
+                if eval $is_match; then
+                    ((pos--))
+                else
+                    break
+                fi
+            done
+            ;;
+
+        *)
+            echo "Invalid motion: $motion" >&2
+            return 1
+            ;;
+    esac
+
+    local new_cursor=$pos
+    zhm_safe_cursor_move $new_cursor
+
+    # If continuing in the same direction, move the anchor in the dir by 1 step
+    local prev_dir=$(zhm_sign $((prev_cursor - prev_anchor)))
+    local new_dir=$(zhm_sign $((new_cursor - prev_cursor)))
+    if [[ $new_dir == $prev_dir ]]; then
+        new_anchor=$((prev_cursor+new_dir))
+    else
+        new_anchor=$prev_cursor
+    fi
+    ZHM_ANCHOR=$new_anchor
+
+    zhm_highlight_selection
 }
 
 function zhm_handle_normal_mode() {
+    local clear_selection=0;
     case $KEYS in
         "i")
             zhm_switch_to_insert_mode
+            clear_selection=1  # TODO: keep selection, in the same way as Helix
             ;;
         "a")
             zhm_safe_cursor_move $((CURSOR + 1))
             zhm_switch_to_insert_mode
+            clear_selection=1  # TODO: keep selection, in the same way as Helix
             ;;
         "A")
             CURSOR=$#BUFFER
             zhm_switch_to_insert_mode
+            clear_selection=1
             ;;
         "I")
             CURSOR=0
             zhm_switch_to_insert_mode
+            clear_selection=1
             ;;
         "h")
             zhm_safe_cursor_move $((CURSOR - 1))
+            clear_selection=1
             ;;
         "l")
             zhm_safe_cursor_move $((CURSOR + 1))
+            clear_selection=1
             ;;
         "w")
-            zhm_find_word_boundary "next" "start" "word"
+            zhm_find_word_boundary "next_word" "word"
             ;;
         "W")
-            zhm_find_word_boundary "next" "start" "WORD"
+            zhm_find_word_boundary "next_word" "WORD"
             ;;
         "b")
-            zhm_find_word_boundary "prev" "start" "word"
+            zhm_find_word_boundary "prev_word" "word"
             ;;
         "B")
-            zhm_find_word_boundary "prev" "start" "WORD"
+            zhm_find_word_boundary "prev_word" "WORD"
             ;;
         "e")
-            zhm_find_word_boundary "next" "end" "word"
+            zhm_find_word_boundary "next_end" "word"
             ;;
         "E")
-            zhm_find_word_boundary "next" "end" "WORD"
+            zhm_find_word_boundary "next_end" "WORD"
             ;;
     esac
+
+    if ((clear_selection)); then
+        zhm_reset_anchor
+    fi
 }
 
 
@@ -345,6 +385,7 @@ function zhm_bind_ascii_range() {
 function zhm_initialize() {
     # Register with ZLE
     zle -N zhm_mode_handler
+    zle_highlight=(region:standout)
 
     # Start in insert mode
     zhm_switch_to_insert_mode
