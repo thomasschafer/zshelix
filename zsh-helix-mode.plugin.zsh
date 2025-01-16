@@ -1,3 +1,4 @@
+typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
 typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
 typeset -g ZHM_CURSOR_INSERT='\e[6 q'
 typeset -g ZHM_MODE_NORMAL="NORMAL"
@@ -15,10 +16,8 @@ function zhm_reset_anchor() {
     ZHM_ANCHOR=$CURSOR
     zhm_remove_highlight
 }
-# TODO: fix calls to the below, and always use that, no manual updates
-    # zhm_safe_cursor_move
 
-
+# TODO: don't call `zhm_safe_cursor_move` directly, use the below
 function zhm_set_cursor_and_anchor() {
     local cursor=$1
     local anchor=$2
@@ -27,11 +26,9 @@ function zhm_set_cursor_and_anchor() {
 
     if ((ZHM_ANCHOR >= 0)); then
         if ((CURSOR >= ZHM_ANCHOR)); then
-            # Going forward: highlight from anchor to cursor inclusive
-            region_highlight=("${ZHM_ANCHOR} $((CURSOR + 1)) standout")
+            region_highlight=("${ZHM_ANCHOR} $((CURSOR + 1)) ${ZSH_HIGHLIGHT_STYLE}")
         else
-            # Going backward: highlight from cursor to anchor inclusive
-            region_highlight=("${CURSOR} $((ZHM_ANCHOR + 1)) standout")
+            region_highlight=("${CURSOR} $((ZHM_ANCHOR + 1)) ${ZSH_HIGHLIGHT_STYLE}")
         fi
     else
         zhm_remove_highlight
