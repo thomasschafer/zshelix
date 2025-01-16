@@ -1,14 +1,11 @@
-# Configuration
 typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
 typeset -g ZHM_CURSOR_INSERT='\e[6 q'
 typeset -g ZHM_MODE_NORMAL="NORMAL"
 typeset -g ZHM_MODE_INSERT="INSERT"
 
-# State tracking
 typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
 typeset -g ZHM_MODE
 
-# Core functions
 function zhm_safe_cursor_move() {
     local new_pos=$1
     if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
@@ -68,6 +65,34 @@ function zhm_forward_kill_word() {
     done
     BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
 }
+
+
+function zhm_backward_word_insert() {
+    local pos=$CURSOR
+    # Skip any spaces immediately before cursor
+    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    # Then skip until we hit a space or start of line
+    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    CURSOR=$pos
+}
+
+function zhm_forward_word_insert() {
+    local pos=$CURSOR
+    # Skip current word if we're in one
+    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    # Skip spaces
+    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    CURSOR=$pos
+}
+
 
 function zhm_find_word_boundary() {
     local direction=$1
@@ -194,11 +219,11 @@ function zhm_handle_normal_mode() {
             zhm_switch_to_insert_mode
             ;;
         "A")
-            CURSOR=$#BUFFER  # Move to end of line
+            CURSOR=$#BUFFER
             zhm_switch_to_insert_mode
             ;;
         "I")
-            CURSOR=0  # Move to start of line
+            CURSOR=0
             zhm_switch_to_insert_mode
             ;;
         "h")
@@ -245,43 +270,15 @@ function zhm_handle_insert_mode() {
             CURSOR=0
             ;;
         $'\C-w')  # Ctrl-w
-            local pos=$CURSOR
-            # Skip any spaces immediately before cursor
-            while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-                ((pos--))
-            done
-            # Then skip until we hit a space or start of line
-            while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-                ((pos--))
-            done
-            BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
-            CURSOR=$pos
+            zhm_backward_kill_word
             ;;
-        $'\eb')  # Alt-b: Move backward one word
-            local pos=$CURSOR
-            # Skip any spaces immediately before cursor
-            while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-                ((pos--))
-            done
-            # Then skip until we hit a space or start of line
-            while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-                ((pos--))
-            done
-            CURSOR=$pos
+        $'\eb')  # Alt-b
+            zhm_backward_word_insert
             ;;
-        $'\ef')  # Alt-f: Move forward one word
-            local pos=$CURSOR
-            # Skip current word if we're in one
-            while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-                ((pos++))
-            done
-            # Skip spaces
-            while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-                ((pos++))
-            done
-            CURSOR=$pos
+        $'\ef')  # Alt-f
+            zhm_forward_word_insert
             ;;
-        $'\ed')  # Alt-d: Delete forward word
+        $'\ed')  # Alt-d
             zhm_forward_kill_word
             ;;
         $'\e[3~')  # Delete key
@@ -289,10 +286,10 @@ function zhm_handle_insert_mode() {
                 BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
             fi
             ;;
-        $'\C-a')  # Ctrl-a: Beginning of line
+        $'\C-a')  # Ctrl-a
             CURSOR=0
             ;;
-        $'\C-e')  # Ctrl-e: End of line
+        $'\C-e')  # Ctrl-e
             CURSOR=$#BUFFER
             ;;
         $'\e\177'|$'\e^?') # Alt-backspace (two common variants)
@@ -308,7 +305,6 @@ function zhm_handle_insert_mode() {
 }
 
 function zhm_mode_handler() {
-    # Validate current mode
     if [[ -z "${ZHM_VALID_MODES[$ZHM_MODE]}" ]]; then
         ZHM_MODE=$ZHM_MODE_NORMAL
         print -n $ZHM_CURSOR_NORMAL
@@ -356,20 +352,17 @@ function zhm_initialize() {
     # Create new keymap
     bindkey -N helix-mode
 
-    # Define all normal mode keys to bind
     local -a normal_mode_keys=(
         h j k l
         w W b B e E
         a A i I
     )
     
-    # Bind all normal mode keys
     for key in $normal_mode_keys; do
         bindkey -M helix-mode $key zhm_mode_handler
     done
 
-    # Bind special keys
-    local -A special_keys=(
+    local -A insert_mode_special_keys=(
         ['\e']='Escape'
         ['^M']='Enter'
         ['^I']='Tab'
@@ -393,7 +386,7 @@ function zhm_initialize() {
         ['\e\e[3~']='Alt-delete (alternate)'
     )
     
-    for key comment in ${(kv)special_keys}; do
+    for key comment in ${(kv)insert_mode_special_keys}; do
         bindkey -M helix-mode $key zhm_mode_handler
     done
 
@@ -404,7 +397,6 @@ function zhm_initialize() {
     # Special handling for hyphen
     bindkey -M helix-mode -- "-" zhm_mode_handler
 
-    # Set a lower timeout for escape sequences
     KEYTIMEOUT=1  # Set timeout to 10ms instead of default 400ms
 
     # Switch to our keymap
@@ -415,5 +407,4 @@ function zhm_initialize() {
     add-zsh-hook precmd zhm_precmd
 }
 
-# Initialize the plugin
 zhm_initialize
