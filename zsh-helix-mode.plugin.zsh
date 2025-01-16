@@ -376,6 +376,9 @@ function zhm_initialize() {
     # Special handling for hyphen
     bindkey -M helix-mode -- "-" zhm_mode_handler
 
+    # Set a lower timeout for escape sequences
+    KEYTIMEOUT=1  # Set timeout to 10ms instead of default 400ms
+
     # Switch to our keymap
     bindkey -A helix-mode main
 
