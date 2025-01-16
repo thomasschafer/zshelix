@@ -67,6 +67,23 @@ function zhm_handle_insert_mode() {
         $'\r')  # Enter
             zle accept-line
             ;;
+        $'\C-u')  # Ctrl-u
+            BUFFER="${BUFFER:$CURSOR}"
+            CURSOR=0
+            ;;
+        $'\C-w')  # Ctrl-w
+            local pos=$CURSOR
+            # Skip any spaces immediately before cursor
+            while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+                ((pos--))
+            done
+            # Then skip until we hit a space or start of line
+            while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+                ((pos--))
+            done
+            BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
+            CURSOR=$pos
+            ;;
         *)
             zhm_insert_character
             ;;
@@ -143,6 +160,8 @@ function zhm_initialize() {
     bindkey -M helix-mode '^[[B' zhm_mode_handler     # Down arrow
     bindkey -M helix-mode '^[[C' zhm_mode_handler     # Right arrow
     bindkey -M helix-mode '^[[D' zhm_mode_handler     # Left arrow
+    bindkey -M helix-mode '^U' zhm_mode_handler       # Ctrl-u
+    bindkey -M helix-mode '^W' zhm_mode_handler       # Ctrl-w
 
     # Switch to our keymap
     bindkey -A helix-mode main
