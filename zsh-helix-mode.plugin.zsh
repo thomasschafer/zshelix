@@ -9,6 +9,8 @@ typeset -g ZHM_MODE
 # -1 means no selection
 typeset -g ZHM_ANCHOR=-1  # -1 means selection is just cursor
 
+typeset -g ZHM_CLIPBOARD=""
+
 function zhm_reset_anchor() {
     ZHM_ANCHOR=$CURSOR
     zhm_remove_highlight
@@ -30,6 +32,95 @@ function zhm_highlight_selection() {
 
 function zhm_remove_highlight() {
     region_highlight=()
+}
+
+function zhm_get_selection_bounds() {
+    if ((ZHM_ANCHOR < 0)); then
+        return 1
+    fi
+    if ((CURSOR >= ZHM_ANCHOR)); then
+        echo $ZHM_ANCHOR $((CURSOR + 1))
+    else
+        echo $CURSOR $((ZHM_ANCHOR + 1))
+    fi
+}
+
+function zhm_operate_on_selection() {
+    local operation=$1  # "yank", "cut", or "delete"
+
+    local bounds=($(zhm_get_selection_bounds))
+    if ((${#bounds} != 2)); then
+        return 1
+    fi
+    local start=$bounds[1]
+    local end=$bounds[2]
+
+    ZHM_CUT_BUFFER="${BUFFER:$start:$((end-start))}"
+
+    if [[ $operation != "yank" ]]; then
+        BUFFER="${BUFFER:0:$start}${BUFFER:$end}"
+        CURSOR=$start
+
+        case $operation in
+            "cut")
+                zhm_switch_to_insert_mode
+                ;;
+            "delete")
+                zhm_reset_anchor
+                ;;
+        esac
+    fi
+    return 0
+}
+
+function zhm_yank() {
+    zhm_operate_on_selection "yank"
+}
+
+function zhm_cut() {
+    zhm_operate_on_selection "cut"
+}
+
+function zhm_delete() {
+    zhm_operate_on_selection "delete"
+}
+
+function zhm_get_selection_bounds() {
+    if ((ZHM_ANCHOR < 0)); then
+        # If no selection, return false
+        return 1
+    fi
+    if ((CURSOR >= ZHM_ANCHOR)); then
+        # Forward selection
+        print -- "$ZHM_ANCHOR $((CURSOR + 1))"
+    else
+        # Backward selection
+        print -- "$CURSOR $((ZHM_ANCHOR + 1))"
+    fi
+    return 0
+}
+
+function zhm_paste() {
+    local before=$1  # 1 for paste before, 0 for paste after
+
+    if [[ -z "$ZHM_CUT_BUFFER" ]]; then
+        return
+    fi
+    local bounds=($(zhm_get_selection_bounds))
+    if ((${#bounds} != 2)); then
+        return 1
+    fi
+
+    local paste_pos=$((before ? bounds[1] : bounds[2]))
+
+    BUFFER="${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
+
+    # Wherever we pasted, highlight that shit
+    CURSOR=$paste_pos
+    ZHM_ANCHOR=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
+    
+    # TDOO: make this one function, to update cursor and anchor and set selectionn
+    zhm_highlight_selection
 }
 
 function zhm_safe_cursor_move() {
@@ -268,6 +359,23 @@ function zhm_handle_normal_mode() {
             zhm_safe_cursor_move $((CURSOR + 1))
             clear_selection=1
             ;;
+        "y")
+            zhm_yank
+            ;;
+        "c")
+            zhm_cut
+            clear_selection=1
+            ;;
+        "d")
+            zhm_delete
+            clear_selection=1
+            ;;
+        "p")
+            zhm_paste 0
+            ;;
+        "P")
+            zhm_paste 1
+            ;;
         "w")
             zhm_find_word_boundary "next_word" "word"
             ;;
@@ -358,7 +466,6 @@ function zhm_mode_handler() {
             zhm_handle_insert_mode
             ;;
     esac
-    
     zle redisplay
 }
 
@@ -374,7 +481,7 @@ function zhm_bind_ascii_range() {
     local start=$1
     local end=$2
     local char
-    
+
     for ascii in {$start..$end}; do
         char=$(printf \\$(printf '%03o' $ascii))
         bindkey -M helix-mode "$char" zhm_mode_handler
@@ -397,8 +504,9 @@ function zhm_initialize() {
         h j k l
         w W b B e E
         a A i I
+        c d
     )
-    
+
     for key in $normal_mode_keys; do
         bindkey -M helix-mode $key zhm_mode_handler
     done
@@ -426,7 +534,7 @@ function zhm_initialize() {
         ['\e[3;3~']='Alt-delete'
         ['\e\e[3~']='Alt-delete (alternate)'
     )
-    
+
     for key comment in ${(kv)insert_mode_special_keys}; do
         bindkey -M helix-mode $key zhm_mode_handler
     done
