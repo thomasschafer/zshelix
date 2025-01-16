@@ -162,6 +162,18 @@ function zhm_handle_normal_mode() {
         "i")
             zhm_switch_to_insert_mode
             ;;
+        "a")
+            zhm_safe_cursor_move $((CURSOR + 1))
+            zhm_switch_to_insert_mode
+            ;;
+        "A")
+            CURSOR=$#BUFFER  # Move to end of line
+            zhm_switch_to_insert_mode
+            ;;
+        "I")
+            CURSOR=0  # Move to start of line
+            zhm_switch_to_insert_mode
+            ;;
         "h")
             zhm_safe_cursor_move $((CURSOR - 1))
             ;;
@@ -265,36 +277,49 @@ function zhm_initialize() {
     # Register with ZLE
     zle -N zhm_mode_handler
 
-    # Set initial cursor
+    # Start in insert mode
     zhm_switch_to_insert_mode
 
     # Create new keymap
     bindkey -N helix-mode
 
-    # Bind normal mode keys
-    bindkey -M helix-mode "h" zhm_mode_handler
-    bindkey -M helix-mode "i" zhm_mode_handler
-    bindkey -M helix-mode "j" zhm_mode_handler
-    bindkey -M helix-mode "k" zhm_mode_handler
-    bindkey -M helix-mode "l" zhm_mode_handler
-
-    # Bind all printable ASCII characters
-    zhm_bind_ascii_range 32 44   # space through comma
-    zhm_bind_ascii_range 46 126  # period through tilde
-    bindkey -M helix-mode -- "-" zhm_mode_handler  # Special handling for hyphen
+    # Define all normal mode keys to bind
+    local -a normal_mode_keys=(
+        h j k l
+        w W b B e E
+        a A i I
+    )
+    
+    # Bind all normal mode keys
+    for key in $normal_mode_keys; do
+        bindkey -M helix-mode $key zhm_mode_handler
+    done
 
     # Bind special keys
-    bindkey -M helix-mode $'\e' zhm_mode_handler      # Escape
-    bindkey -M helix-mode '^M' zhm_mode_handler       # Enter
-    bindkey -M helix-mode '^I' zhm_mode_handler       # Tab
-    bindkey -M helix-mode '^H' zhm_mode_handler       # Backspace
-    bindkey -M helix-mode '^?' zhm_mode_handler       # Delete
-    bindkey -M helix-mode '^[[A' zhm_mode_handler     # Up arrow
-    bindkey -M helix-mode '^[[B' zhm_mode_handler     # Down arrow
-    bindkey -M helix-mode '^[[C' zhm_mode_handler     # Right arrow
-    bindkey -M helix-mode '^[[D' zhm_mode_handler     # Left arrow
-    bindkey -M helix-mode '^U' zhm_mode_handler       # Ctrl-u
-    bindkey -M helix-mode '^W' zhm_mode_handler       # Ctrl-w
+    local -A special_keys=(
+        ['\e']='Escape'
+        ['^M']='Enter'
+        ['^I']='Tab'
+        ['^H']='Backspace'
+        ['^?']='Delete'
+        ['^[[A']='Up arrow'
+        ['^[[B']='Down arrow'
+        ['^[[C']='Right arrow'
+        ['^[[D']='Left arrow'
+        ['^U']='Ctrl-u'
+        ['^W']='Ctrl-w'
+    )
+    
+    for key comment in ${(kv)special_keys}; do
+        bindkey -M helix-mode $key zhm_mode_handler
+    done
+
+    # Bind all printable ASCII characters (32-126)
+    for ascii in {32..44} {46..126}; do
+        bindkey -M helix-mode "$(printf \\$(printf '%03o' $ascii))" zhm_mode_handler
+    done
+    # Special handling for hyphen
+    bindkey -M helix-mode -- "-" zhm_mode_handler
 
     # Switch to our keymap
     bindkey -A helix-mode main
