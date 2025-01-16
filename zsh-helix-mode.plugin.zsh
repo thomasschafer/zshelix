@@ -201,6 +201,7 @@ function zhm_handle_normal_mode() {
     esac
 }
 
+
 function zhm_handle_insert_mode() {
     case $KEYS in
         $'\e')  # Escape
@@ -228,6 +229,53 @@ function zhm_handle_insert_mode() {
             done
             BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
             CURSOR=$pos
+            ;;
+        $'\eb')  # Alt-b: Move backward one word
+            local pos=$CURSOR
+            # Skip any spaces immediately before cursor
+            while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+                ((pos--))
+            done
+            # Then skip until we hit a space or start of line
+            while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+                ((pos--))
+            done
+            CURSOR=$pos
+            ;;
+        $'\ef')  # Alt-f: Move forward one word
+            local pos=$CURSOR
+            # Skip current word if we're in one
+            while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+                ((pos++))
+            done
+            # Skip spaces
+            while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+                ((pos++))
+            done
+            CURSOR=$pos
+            ;;
+        $'\ed')  # Alt-d: Delete forward word
+            local pos=$CURSOR
+            # Skip current word if we're in one
+            while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+                ((pos++))
+            done
+            # Skip spaces
+            while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+                ((pos++))
+            done
+            BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
+            ;;
+        $'\e[3~')  # Delete key
+            if ((CURSOR < $#BUFFER)); then
+                BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
+            fi
+            ;;
+        $'\C-a')  # Ctrl-a: Beginning of line
+            CURSOR=0
+            ;;
+        $'\C-e')  # Ctrl-e: End of line
+            CURSOR=$#BUFFER
             ;;
         *)
             zhm_insert_character
@@ -273,6 +321,7 @@ function zhm_bind_ascii_range() {
     done
 }
 
+
 function zhm_initialize() {
     # Register with ZLE
     zle -N zhm_mode_handler
@@ -308,6 +357,12 @@ function zhm_initialize() {
         ['^[[D']='Left arrow'
         ['^U']='Ctrl-u'
         ['^W']='Ctrl-w'
+        ['\eb']='Alt-b'
+        ['\ef']='Alt-f'
+        ['\ed']='Alt-d'
+        ['^A']='Ctrl-a'
+        ['^E']='Ctrl-e'
+        ['^[[3~']='Delete key'
     )
     
     for key comment in ${(kv)special_keys}; do
