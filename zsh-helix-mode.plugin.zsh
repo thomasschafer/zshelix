@@ -42,6 +42,33 @@ function zhm_handle_backspace() {
     fi
 }
 
+function zhm_backward_kill_word() {
+    local pos=$CURSOR
+    # Skip any spaces immediately before cursor
+    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    # Then skip until we hit a space or start of line
+    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
+    CURSOR=$pos
+}
+
+function zhm_forward_kill_word() {
+    local pos=$CURSOR
+    # Skip current word if we're in one
+    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    # Skip spaces
+    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
+}
+
 function zhm_find_word_boundary() {
     local direction=$1
     local boundary=$2
@@ -255,16 +282,7 @@ function zhm_handle_insert_mode() {
             CURSOR=$pos
             ;;
         $'\ed')  # Alt-d: Delete forward word
-            local pos=$CURSOR
-            # Skip current word if we're in one
-            while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-                ((pos++))
-            done
-            # Skip spaces
-            while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-                ((pos++))
-            done
-            BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
+            zhm_forward_kill_word
             ;;
         $'\e[3~')  # Delete key
             if ((CURSOR < $#BUFFER)); then
@@ -276,6 +294,12 @@ function zhm_handle_insert_mode() {
             ;;
         $'\C-e')  # Ctrl-e: End of line
             CURSOR=$#BUFFER
+            ;;
+        $'\e\177'|$'\e^?') # Alt-backspace (two common variants)
+            zhm_backward_kill_word
+            ;;
+        $'\e[3;3~'|$'\e\e[3~') # Alt-delete (two common variants)
+            zhm_forward_kill_word
             ;;
         *)
             zhm_insert_character
@@ -363,6 +387,10 @@ function zhm_initialize() {
         ['^A']='Ctrl-a'
         ['^E']='Ctrl-e'
         ['^[[3~']='Delete key'
+        ['\e\177']='Alt-backspace'
+        ['\e^?']='Alt-backspace (alternate)'
+        ['\e[3;3~']='Alt-delete'
+        ['\e\e[3~']='Alt-delete (alternate)'
     )
     
     for key comment in ${(kv)special_keys}; do
