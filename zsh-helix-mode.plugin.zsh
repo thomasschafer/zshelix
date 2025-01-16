@@ -390,12 +390,26 @@ function zhm_initialize() {
         bindkey -M helix-mode $key zhm_mode_handler
     done
 
+    # Bind history search
+    bindkey -M helix-mode '^R' history-incremental-search-backward
+    bindkey -M helix-mode '^S' history-incremental-search-forward
+    bindkey -M helix-mode '^P' up-line-or-history
+    bindkey -M helix-mode '^N' down-line-or-history
+
+    bindkey -M isearch '^?' backward-delete-char
+    bindkey -M isearch '^H' backward-delete-char
+    bindkey -M isearch '^W' backward-kill-word
+
     # Bind all printable ASCII characters (32-126)
+    local char
     for ascii in {32..44} {46..126}; do
-        bindkey -M helix-mode "$(printf \\$(printf '%03o' $ascii))" zhm_mode_handler
+        char=$(printf \\$(printf '%03o' $ascii))
+        bindkey -M helix-mode "$char" zhm_mode_handler
+        bindkey -M isearch "$char" self-insert
     done
     # Special handling for hyphen
     bindkey -M helix-mode -- "-" zhm_mode_handler
+    bindkey -M isearch -- "-" self-insert
 
     KEYTIMEOUT=1  # Set timeout to 10ms instead of default 400ms
 
