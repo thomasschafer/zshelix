@@ -1,137 +1,156 @@
-# Define the widget function
-function helix-mode-handler() {
-    case $HELIX_MODE in
-        "NORMAL")
-            case $KEYS in
-                "i")
-                    HELIX_MODE="INSERT"
-                    print -n '\e[6 q'  # Bar cursor
-                    ;;
-                "h")
-                    if ((CURSOR > 0)); then
-                        ((CURSOR--))
-                    fi
-                    ;;
-                "l")
-                    if ((CURSOR < $#BUFFER)); then
-                        ((CURSOR++))
-                    fi
-                    ;;
-            esac
+# Configuration
+typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
+typeset -g ZHM_CURSOR_INSERT='\e[6 q'
+typeset -g ZHM_MODE_NORMAL="NORMAL"
+typeset -g ZHM_MODE_INSERT="INSERT"
+
+# State tracking
+typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
+typeset -g ZHM_MODE
+
+# Core functions
+function zhm_safe_cursor_move() {
+    local new_pos=$1
+    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
+        CURSOR=$new_pos
+        return 0
+    fi
+    return 1
+}
+
+function zhm_switch_to_insert_mode() {
+    ZHM_MODE=$ZHM_MODE_INSERT
+    print -n $ZHM_CURSOR_INSERT
+}
+
+function zhm_switch_to_normal_mode() {
+    ZHM_MODE=$ZHM_MODE_NORMAL
+    print -n $ZHM_CURSOR_NORMAL
+}
+
+function zhm_insert_character() {
+    if [[ $KEYS =~ [[:print:]] ]]; then
+        BUFFER="${BUFFER:0:$CURSOR}$KEYS${BUFFER:$CURSOR}"
+        ((CURSOR++))
+    fi
+}
+
+function zhm_handle_backspace() {
+    if ((CURSOR > 0)); then
+        ((CURSOR--))
+        BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
+    fi
+}
+
+function zhm_handle_normal_mode() {
+    case $KEYS in
+        "i")
+            zhm_switch_to_insert_mode
             ;;
-        "INSERT")
-            if [[ $KEYS == $'\e' ]]; then  # Escape
-                HELIX_MODE="NORMAL"
-                print -n '\e[2 q'  # Block cursor
-            elif [[ $KEYS == $'\177' ]]; then  # Backspace
-                if ((CURSOR > 0)); then
-                    ((CURSOR--))
-                    BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
-                fi
-            elif [[ $KEYS == $'\r' ]]; then  # Enter
-                zle accept-line
-            else
-                BUFFER="${BUFFER:0:$CURSOR}$KEYS${BUFFER:$CURSOR}"
-                ((CURSOR++))
-            fi
+        "h")
+            zhm_safe_cursor_move $((CURSOR - 1))
+            ;;
+        "l")
+            zhm_safe_cursor_move $((CURSOR + 1))
+            ;;
+    esac
+}
+
+function zhm_handle_insert_mode() {
+    case $KEYS in
+        $'\e')  # Escape
+            zhm_switch_to_normal_mode
+            ;;
+        $'\177')  # Backspace
+            zhm_handle_backspace
+            ;;
+        $'\r')  # Enter
+            zle accept-line
+            ;;
+        *)
+            zhm_insert_character
+            ;;
+    esac
+}
+
+function zhm_mode_handler() {
+    # Validate current mode
+    if [[ -z "${ZHM_VALID_MODES[$ZHM_MODE]}" ]]; then
+        ZHM_MODE=$ZHM_MODE_NORMAL
+        print -n $ZHM_CURSOR_NORMAL
+    fi
+
+    case $ZHM_MODE in
+        $ZHM_MODE_NORMAL)
+            zhm_handle_normal_mode
+            ;;
+        $ZHM_MODE_INSERT)
+            zhm_handle_insert_mode
             ;;
     esac
     
     zle redisplay
 }
 
-precmd() {
-    if [[ $HELIX_MODE == "INSERT" ]]; then
-        print -n '\e[6 q'  # Bar cursor
+function zhm_precmd() {
+    if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
+        print -n $ZHM_CURSOR_INSERT
     else
-        print -n '\e[2 q'  # Block cursor
+        print -n $ZHM_CURSOR_NORMAL
     fi
 }
 
+function zhm_bind_ascii_range() {
+    local start=$1
+    local end=$2
+    local char
+    
+    for ascii in {$start..$end}; do
+        char=$(printf \\$(printf '%03o' $ascii))
+        bindkey -M helix-mode "$char" zhm_mode_handler
+    done
+}
 
-# Register with ZLE
-zle -N helix-mode-handler
+function zhm_initialize() {
+    # Register with ZLE
+    zle -N zhm_mode_handler
 
-# Initialize state
-typeset -g HELIX_MODE="NORMAL"
-print -n '\e[2 q'  # Start with block cursor
+    # Set initial cursor
+    zhm_switch_to_insert_mode
 
-# Create new keymap
-bindkey -N helix-mode
+    # Create new keymap
+    bindkey -N helix-mode
 
-# Bind normal mode keys
-bindkey -M helix-mode "h" helix-mode-handler
-bindkey -M helix-mode "i" helix-mode-handler
-bindkey -M helix-mode "j" helix-mode-handler
-bindkey -M helix-mode "k" helix-mode-handler
-bindkey -M helix-mode "l" helix-mode-handler
+    # Bind normal mode keys
+    bindkey -M helix-mode "h" zhm_mode_handler
+    bindkey -M helix-mode "i" zhm_mode_handler
+    bindkey -M helix-mode "j" zhm_mode_handler
+    bindkey -M helix-mode "k" zhm_mode_handler
+    bindkey -M helix-mode "l" zhm_mode_handler
 
-# Bind all printable ASCII characters
-## Letters
-for ascii in {97..122}; do  # a-z
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
-for ascii in {65..90}; do  # A-Z
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
+    # Bind all printable ASCII characters
+    zhm_bind_ascii_range 32 44   # space through comma
+    zhm_bind_ascii_range 46 126  # period through tilde
+    bindkey -M helix-mode -- "-" zhm_mode_handler  # Special handling for hyphen
 
-## Numbers
-for ascii in {48..57}; do  # 0-9
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
+    # Bind special keys
+    bindkey -M helix-mode $'\e' zhm_mode_handler      # Escape
+    bindkey -M helix-mode '^M' zhm_mode_handler       # Enter
+    bindkey -M helix-mode '^I' zhm_mode_handler       # Tab
+    bindkey -M helix-mode '^H' zhm_mode_handler       # Backspace
+    bindkey -M helix-mode '^?' zhm_mode_handler       # Delete
+    bindkey -M helix-mode '^[[A' zhm_mode_handler     # Up arrow
+    bindkey -M helix-mode '^[[B' zhm_mode_handler     # Down arrow
+    bindkey -M helix-mode '^[[C' zhm_mode_handler     # Right arrow
+    bindkey -M helix-mode '^[[D' zhm_mode_handler     # Left arrow
 
-## Symbols and punctuation
-# Space through #
-for ascii in {32..35}; do
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
+    # Switch to our keymap
+    bindkey -A helix-mode main
 
-# $ through )
-for ascii in {36..41}; do
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
+    # Add our precmd hook
+    autoload -Uz add-zsh-hook
+    add-zsh-hook precmd zhm_precmd
+}
 
-# Individual bindings for special characters
-bindkey -M helix-mode "*" helix-mode-handler
-bindkey -M helix-mode "+" helix-mode-handler
-bindkey -M helix-mode "," helix-mode-handler
-bindkey -M helix-mode -- "-" helix-mode-handler
-bindkey -M helix-mode "." helix-mode-handler
-bindkey -M helix-mode "/" helix-mode-handler
-
-# : through @
-for ascii in {58..64}; do
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
-
-# [ through `
-for ascii in {91..96}; do
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
-
-# { through ~
-for ascii in {123..126}; do
-    char=$(printf \\$(printf '%03o' $ascii))
-    bindkey -M helix-mode "$char" helix-mode-handler
-done
-
-# Special keys
-bindkey -M helix-mode $'\e' helix-mode-handler     # Escape
-bindkey -M helix-mode '^M' helix-mode-handler      # Enter
-bindkey -M helix-mode '^I' helix-mode-handler      # Tab
-bindkey -M helix-mode '^H' helix-mode-handler      # Backspace
-bindkey -M helix-mode '^?' helix-mode-handler      # Delete
-bindkey -M helix-mode '^[[A' helix-mode-handler    # Up arrow
-bindkey -M helix-mode '^[[B' helix-mode-handler    # Down arrow
-bindkey -M helix-mode '^[[C' helix-mode-handler    # Right arrow
-bindkey -M helix-mode '^[[D' helix-mode-handler    # Left arrow
-
-# Switch to our keymap
-bindkey -A helix-mode main
+# Initialize the plugin
+zhm_initialize
