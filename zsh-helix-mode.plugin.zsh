@@ -15,8 +15,16 @@ function zhm_reset_anchor() {
     ZHM_ANCHOR=$CURSOR
     zhm_remove_highlight
 }
+# TODO: fix calls to the below, and always use that, no manual updates
+    # zhm_safe_cursor_move
 
-function zhm_highlight_selection() {
+
+function zhm_set_cursor_and_anchor() {
+    local cursor=$1
+    local anchor=$2
+    zhm_safe_cursor_move $cursor
+    zhm_safe_anchor_move $anchor
+
     if ((ZHM_ANCHOR >= 0)); then
         if ((CURSOR >= ZHM_ANCHOR)); then
             # Going forward: highlight from anchor to cursor inclusive
@@ -115,18 +123,36 @@ function zhm_paste() {
 
     BUFFER="${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
 
-    # Wherever we pasted, highlight that shit
-    CURSOR=$paste_pos
-    ZHM_ANCHOR=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
-    
-    # TDOO: make this one function, to update cursor and anchor and set selectionn
-    zhm_highlight_selection
+    local pos1=$paste_pos
+    local pos2=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
+
+    # Select pasted contents
+    local ordering=$(zhm_sign $((CURSOR - ZHM_ANCHOR)))
+    local cursor= anchor=
+    if [[ $ordering == 1 ]]; then
+        cursor=$pos2
+        anchor=$pos1
+    else
+        cursor=$pos1
+        anchor=$pos2
+    fi
+    zhm_set_cursor_and_anchor $cursor $anchor
 }
 
+# TODO: combine the two below
 function zhm_safe_cursor_move() {
     local new_pos=$1
     if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
         CURSOR=$new_pos
+        return 0
+    fi
+    return 1
+}
+
+function zhm_safe_anchor_move() {
+    local new_pos=$1
+    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
+        ZHM_ANCHOR=$new_pos
         return 0
     fi
     return 1
@@ -139,8 +165,7 @@ function zhm_switch_to_insert_mode() {
 }
 
 function zhm_switch_to_normal_mode() {
-    ZHM_ANCHOR=$CURSOR
-    zhm_highlight_selection
+    zhm_set_cursor_and_anchor $CURSOR $CURSOR
     ZHM_MODE=$ZHM_MODE_NORMAL
     print -n $ZHM_CURSOR_NORMAL
 }
@@ -314,7 +339,6 @@ function zhm_find_word_boundary() {
     esac
 
     local new_cursor=$pos
-    zhm_safe_cursor_move $new_cursor
 
     # If continuing in the same direction, move the anchor in the dir by 1 step
     local prev_dir=$(zhm_sign $((prev_cursor - prev_anchor)))
@@ -324,9 +348,8 @@ function zhm_find_word_boundary() {
     else
         new_anchor=$prev_cursor
     fi
-    ZHM_ANCHOR=$new_anchor
 
-    zhm_highlight_selection
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor
 }
 
 function zhm_handle_normal_mode() {
