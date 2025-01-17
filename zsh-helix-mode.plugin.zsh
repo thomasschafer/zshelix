@@ -159,12 +159,14 @@ function zhm_switch_to_insert_mode() {
     zhm_remove_highlight
     ZHM_MODE=$ZHM_MODE_INSERT
     print -n $ZHM_CURSOR_INSERT
+    bindkey -v
 }
 
 function zhm_switch_to_normal_mode() {
     zhm_set_cursor_and_anchor $CURSOR $CURSOR
     ZHM_MODE=$ZHM_MODE_NORMAL
     print -n $ZHM_CURSOR_NORMAL
+    bindkey -A helix-normal-mode main
 }
 
 function zhm_insert_character() {
@@ -421,74 +423,6 @@ function zhm_handle_normal_mode() {
     fi
 }
 
-
-function zhm_handle_insert_mode() {
-    case $KEYS in
-        $'\e')  # Escape
-            zhm_switch_to_normal_mode
-            ;;
-        $'\177')  # Backspace
-            zhm_handle_backspace
-            ;;
-        $'\r')  # Enter
-            zle accept-line
-            ;;
-        $'\C-u')  # Ctrl-u
-            BUFFER="${BUFFER:$CURSOR}"
-            CURSOR=0
-            ;;
-        $'\C-w')  # Ctrl-w
-            zhm_backward_kill_word
-            ;;
-        $'\eb')  # Alt-b
-            zhm_backward_word_insert
-            ;;
-        $'\ef')  # Alt-f
-            zhm_forward_word_insert
-            ;;
-        $'\ed')  # Alt-d
-            zhm_forward_kill_word
-            ;;
-        $'\e[3~')  # Delete key
-            if ((CURSOR < $#BUFFER)); then
-                BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
-            fi
-            ;;
-        $'\C-a')  # Ctrl-a
-            CURSOR=0
-            ;;
-        $'\C-e')  # Ctrl-e
-            CURSOR=$#BUFFER
-            ;;
-        $'\e\177'|$'\e^?') # Alt-backspace (two common variants)
-            zhm_backward_kill_word
-            ;;
-        $'\e[3;3~'|$'\e\e[3~') # Alt-delete (two common variants)
-            zhm_forward_kill_word
-            ;;
-        *)
-            zhm_insert_character
-            ;;
-    esac
-}
-
-function zhm_mode_handler() {
-    if [[ -z "${ZHM_VALID_MODES[$ZHM_MODE]}" ]]; then
-        ZHM_MODE=$ZHM_MODE_NORMAL
-        print -n $ZHM_CURSOR_NORMAL
-    fi
-
-    case $ZHM_MODE in
-        $ZHM_MODE_NORMAL)
-            zhm_handle_normal_mode
-            ;;
-        $ZHM_MODE_INSERT)
-            zhm_handle_insert_mode
-            ;;
-    esac
-    zle redisplay
-}
-
 function zhm_precmd() {
     if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
         print -n $ZHM_CURSOR_INSERT
@@ -497,85 +431,57 @@ function zhm_precmd() {
     fi
 }
 
+
 function zhm_initialize() {
-    # Register with ZLE
-    zle -N zhm_mode_handler
-    zle_highlight=(region:standout)
+    # Register our widgets with ZLE
+    zle -N zhm_handle_normal_mode
+    zle -N zhm_switch_to_normal_mode
+    zle -N zhm_switch_to_insert_mode
 
-    # Start in insert mode
-    zhm_switch_to_insert_mode
+    # Create keymap for normal mode
+    bindkey -N helix-normal-mode
 
-    # Create new keymap
-    bindkey -N helix-mode
-
+    # Bind normal mode keys
     local -a normal_mode_keys=(
         h j k l
         w W b B e E
         a A i I
-        c d
+        c d y p P
     )
 
     for key in $normal_mode_keys; do
-        bindkey -M helix-mode $key zhm_mode_handler
+        bindkey -M helix-normal-mode $key zhm_handle_normal_mode
     done
+    bindkey -M helix-normal-mode '^R' history-incremental-search-backward
+    bindkey -M helix-normal-mode '^S' history-incremental-search-forward
+    bindkey -M helix-normal-mode '^P' up-line-or-history
+    bindkey -M helix-normal-mode '^N' down-line-or-history
 
-    local -A insert_mode_special_keys=(
-        ['\e']='Escape'
-        ['^M']='Enter'
-        ['^I']='Tab'
-        ['^H']='Backspace'
-        ['^?']='Delete'
-        ['^[[A']='Up arrow'
-        ['^[[B']='Down arrow'
-        ['^[[C']='Right arrow'
-        ['^[[D']='Left arrow'
-        ['^U']='Ctrl-u'
-        ['^W']='Ctrl-w'
-        ['\eb']='Alt-b'
-        ['\ef']='Alt-f'
-        ['\ed']='Alt-d'
-        ['^A']='Ctrl-a'
-        ['^E']='Ctrl-e'
-        ['^[[3~']='Delete key'
-        ['\e\177']='Alt-backspace'
-        ['\e^?']='Alt-backspace (alternate)'
-        ['\e[3;3~']='Alt-delete'
-        ['\e\e[3~']='Alt-delete (alternate)'
-    )
+    # Register our widget
+    zle -N zhm_handle_normal_mode
 
-    for key comment in ${(kv)insert_mode_special_keys}; do
-        bindkey -M helix-mode $key zhm_mode_handler
-    done
+    # Start in insert mode with default Zsh behavior
+    bindkey -v
 
-    # Bind history search
-    bindkey -M helix-mode '^R' history-incremental-search-backward
-    bindkey -M helix-mode '^S' history-incremental-search-forward
-    bindkey -M helix-mode '^P' up-line-or-history
-    bindkey -M helix-mode '^N' down-line-or-history
+    # Bind escape to switch to normal mode
+    bindkey -M viins '\e' zhm_switch_to_normal_mode
 
+    # Set short timeout for escape key
+    KEYTIMEOUT=1
+
+    # Bind history search in both modes
+    bindkey -M viins '^R' history-incremental-search-backward
+    bindkey -M viins '^S' history-incremental-search-forward
+    bindkey -M viins '^P' up-line-or-history
+    bindkey -M viins '^N' down-line-or-history
+
+    # Bind isearch keys
     bindkey -M isearch '^?' backward-delete-char
     bindkey -M isearch '^H' backward-delete-char
     bindkey -M isearch '^W' backward-kill-word
 
-    # Bind all printable ASCII characters (32-126)
-    local char
-    for ascii in {32..44} {46..126}; do
-        char=$(printf \\$(printf '%03o' $ascii))
-        bindkey -M helix-mode "$char" zhm_mode_handler
-        bindkey -M isearch "$char" self-insert
-    done
-    # Special handling for hyphen
-    bindkey -M helix-mode -- "-" zhm_mode_handler
-    bindkey -M isearch -- "-" self-insert
-
-    KEYTIMEOUT=1  # Set timeout to 10ms instead of default 400ms
-
-    # Switch to our keymap
-    bindkey -A helix-mode main
-
-    # Add our precmd hook
-    autoload -Uz add-zsh-hook
-    add-zsh-hook precmd zhm_precmd
+    # Initialize insert mode
+    zhm_switch_to_insert_mode
 }
 
 zhm_initialize
