@@ -8,10 +8,34 @@ typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
 typeset -g ZHM_MODE
 
 # -1 means no selection
-typeset -g ZHM_ANCHOR=-1  # -1 means selection is just cursor
-
+typeset -g ZHM_ANCHOR=-1
 typeset -g ZHM_CLIPBOARD=""
 
+### Utility functions ###
+function zhm_sign() {
+    local num=$1
+    echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
+}
+
+function zhm_safe_cursor_move() {
+    local new_pos=$1
+    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
+        CURSOR=$new_pos
+        return 0
+    fi
+    return 1
+}
+
+function zhm_safe_anchor_move() {
+    local new_pos=$1
+    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
+        ZHM_ANCHOR=$new_pos
+        return 0
+    fi
+    return 1
+}
+
+### Selection and highlighting ###
 function zhm_reset_anchor() {
     ZHM_ANCHOR=$CURSOR
     zhm_remove_highlight
@@ -50,6 +74,119 @@ function zhm_get_selection_bounds() {
     fi
 }
 
+### Mode switching ###
+function zhm_switch_to_insert_mode() {
+    zhm_remove_highlight
+    ZHM_MODE=$ZHM_MODE_INSERT
+    print -n $ZHM_CURSOR_INSERT
+    bindkey -v
+}
+
+function zhm_switch_to_normal_mode() {
+    zhm_set_cursor_and_anchor $CURSOR $CURSOR
+    ZHM_MODE=$ZHM_MODE_NORMAL
+    print -n $ZHM_CURSOR_NORMAL
+    bindkey -A helix-normal-mode main
+}
+
+### Basic movement and editing ###
+function zhm_move_left() {
+    zhm_safe_cursor_move $((CURSOR - 1))
+    zhm_reset_anchor
+}
+
+function zhm_move_right() {
+    zhm_safe_cursor_move $((CURSOR + 1))
+    zhm_reset_anchor
+}
+
+function zhm_append() {
+    zhm_safe_cursor_move $((CURSOR + 1))
+    zhm_switch_to_insert_mode
+    zhm_reset_anchor
+}
+
+function zhm_append_end() {
+    CURSOR=$#BUFFER
+    zhm_switch_to_insert_mode
+    zhm_reset_anchor
+}
+
+function zhm_insert_start() {
+    CURSOR=0
+    zhm_switch_to_insert_mode
+    zhm_reset_anchor
+}
+
+function zhm_delete_char_forward() {
+    if ((CURSOR < $#BUFFER)); then
+        BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
+    fi
+}
+
+function zhm_go_beginning() {
+    CURSOR=0
+}
+
+function zhm_go_end() {
+    CURSOR=$#BUFFER
+}
+
+### Word operations ###
+function zhm_backward_word_insert() {
+    local pos=$CURSOR
+    # Skip any spaces immediately before cursor
+    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    # Then skip until we hit a space or start of line
+    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    CURSOR=$pos
+}
+
+function zhm_forward_word_insert() {
+    local pos=$CURSOR
+    # Skip current word if we're in one
+    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    # Skip spaces
+    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    CURSOR=$pos
+}
+
+function zhm_backward_kill_word() {
+    local pos=$CURSOR
+    # Skip any spaces immediately before cursor
+    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    # Then skip until we hit a space or start of line
+    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
+        ((pos--))
+    done
+    BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
+    CURSOR=$pos
+}
+
+function zhm_forward_kill_word() {
+    local pos=$CURSOR
+    # Skip current word if we're in one
+    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    # Skip spaces
+    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
+        ((pos++))
+    done
+    BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
+}
+
+### Selection operations ###
 function zhm_operate_on_selection() {
     local operation=$1  # "yank", "cut", or "delete"
 
@@ -90,21 +227,6 @@ function zhm_delete() {
     zhm_operate_on_selection "delete"
 }
 
-function zhm_get_selection_bounds() {
-    if ((ZHM_ANCHOR < 0)); then
-        # If no selection, return false
-        return 1
-    fi
-    if ((CURSOR >= ZHM_ANCHOR)); then
-        # Forward selection
-        print -- "$ZHM_ANCHOR $((CURSOR + 1))"
-    else
-        # Backward selection
-        print -- "$CURSOR $((ZHM_ANCHOR + 1))"
-    fi
-    return 0
-}
-
 function zhm_paste() {
     local before=$1  # 1 for paste before, 0 for paste after
 
@@ -136,112 +258,15 @@ function zhm_paste() {
     zhm_set_cursor_and_anchor $cursor $anchor
 }
 
-# TODO: combine the two below
-function zhm_safe_cursor_move() {
-    local new_pos=$1
-    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
-        CURSOR=$new_pos
-        return 0
-    fi
-    return 1
+function zhm_paste_after() {
+    zhm_paste 0
 }
 
-function zhm_safe_anchor_move() {
-    local new_pos=$1
-    if ((new_pos >= 0 && new_pos <= $#BUFFER)); then
-        ZHM_ANCHOR=$new_pos
-        return 0
-    fi
-    return 1
+function zhm_paste_before() {
+    zhm_paste 1
 }
 
-function zhm_switch_to_insert_mode() {
-    zhm_remove_highlight
-    ZHM_MODE=$ZHM_MODE_INSERT
-    print -n $ZHM_CURSOR_INSERT
-    bindkey -v
-}
-
-function zhm_switch_to_normal_mode() {
-    zhm_set_cursor_and_anchor $CURSOR $CURSOR
-    ZHM_MODE=$ZHM_MODE_NORMAL
-    print -n $ZHM_CURSOR_NORMAL
-    bindkey -A helix-normal-mode main
-}
-
-function zhm_insert_character() {
-    if [[ $KEYS =~ [[:print:]] ]]; then
-        BUFFER="${BUFFER:0:$CURSOR}$KEYS${BUFFER:$CURSOR}"
-        ((CURSOR++))
-    fi
-}
-
-function zhm_handle_backspace() {
-    if ((CURSOR > 0)); then
-        ((CURSOR--))
-        BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
-    fi
-}
-
-function zhm_backward_kill_word() {
-    local pos=$CURSOR
-    # Skip any spaces immediately before cursor
-    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    # Then skip until we hit a space or start of line
-    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
-    CURSOR=$pos
-}
-
-function zhm_forward_kill_word() {
-    local pos=$CURSOR
-    # Skip current word if we're in one
-    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    # Skip spaces
-    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
-}
-
-
-function zhm_backward_word_insert() {
-    local pos=$CURSOR
-    # Skip any spaces immediately before cursor
-    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    # Then skip until we hit a space or start of line
-    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    CURSOR=$pos
-}
-
-function zhm_forward_word_insert() {
-    local pos=$CURSOR
-    # Skip current word if we're in one
-    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    # Skip spaces
-    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    CURSOR=$pos
-}
-
-function zhm_sign() {
-  local num=$1
-  echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
-}
-
+### Word boundary navigation ###
 function zhm_find_word_boundary() {
     local motion=$1    # next_word | next_end | prev_word
     local word_type=$2 # word | WORD
@@ -351,78 +376,31 @@ function zhm_find_word_boundary() {
     zhm_set_cursor_and_anchor $new_cursor $new_anchor
 }
 
-function zhm_handle_normal_mode() {
-    local clear_selection=0;
-    case $KEYS in
-        "i")
-            zhm_switch_to_insert_mode
-            clear_selection=1  # TODO: keep selection, in the same way as Helix
-            ;;
-        "a")
-            zhm_safe_cursor_move $((CURSOR + 1))
-            zhm_switch_to_insert_mode
-            clear_selection=1  # TODO: keep selection, in the same way as Helix
-            ;;
-        "A")
-            CURSOR=$#BUFFER
-            zhm_switch_to_insert_mode
-            clear_selection=1
-            ;;
-        "I")
-            CURSOR=0
-            zhm_switch_to_insert_mode
-            clear_selection=1
-            ;;
-        "h")
-            zhm_safe_cursor_move $((CURSOR - 1))
-            clear_selection=1
-            ;;
-        "l")
-            zhm_safe_cursor_move $((CURSOR + 1))
-            clear_selection=1
-            ;;
-        "y")
-            zhm_yank
-            ;;
-        "c")
-            zhm_cut
-            clear_selection=1
-            ;;
-        "d")
-            zhm_delete
-            clear_selection=1
-            ;;
-        "p")
-            zhm_paste 0
-            ;;
-        "P")
-            zhm_paste 1
-            ;;
-        "w")
-            zhm_find_word_boundary "next_word" "word"
-            ;;
-        "W")
-            zhm_find_word_boundary "next_word" "WORD"
-            ;;
-        "b")
-            zhm_find_word_boundary "prev_word" "word"
-            ;;
-        "B")
-            zhm_find_word_boundary "prev_word" "WORD"
-            ;;
-        "e")
-            zhm_find_word_boundary "next_end" "word"
-            ;;
-        "E")
-            zhm_find_word_boundary "next_end" "WORD"
-            ;;
-    esac
-
-    if ((clear_selection)); then
-        zhm_reset_anchor
-    fi
+function zhm_next_word() {
+    zhm_find_word_boundary "next_word" "word"
 }
 
+function zhm_next_WORD() {
+    zhm_find_word_boundary "next_word" "WORD"
+}
+
+function zhm_prev_word() {
+    zhm_find_word_boundary "prev_word" "word"
+}
+
+function zhm_prev_WORD() {
+    zhm_find_word_boundary "prev_word" "WORD"
+}
+
+function zhm_next_end() {
+    zhm_find_word_boundary "next_end" "word"
+}
+
+function zhm_next_END() {
+    zhm_find_word_boundary "next_end" "WORD"
+}
+
+# Precmd hook for cursor style
 function zhm_precmd() {
     if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
         print -n $ZHM_CURSOR_INSERT
@@ -431,56 +409,87 @@ function zhm_precmd() {
     fi
 }
 
-
+# Initialization
 function zhm_initialize() {
-    # Register our widgets with ZLE
-    zle -N zhm_handle_normal_mode
-    zle -N zhm_switch_to_normal_mode
-    zle -N zhm_switch_to_insert_mode
+    local -a widgets=(
+        zhm_switch_to_normal_mode
+        zhm_switch_to_insert_mode
+        zhm_move_left
+        zhm_move_right
+        zhm_append
+        zhm_append_end
+        zhm_insert_start
+        zhm_yank
+        zhm_cut
+        zhm_delete
+        zhm_paste_after
+        zhm_paste_before
+        zhm_next_word
+        zhm_next_WORD
+        zhm_prev_word
+        zhm_prev_WORD
+        zhm_next_end
+        zhm_next_END
+        zhm_backward_word_insert
+        zhm_forward_word_insert
+        zhm_forward_kill_word
+        zhm_backward_kill_word
+        zhm_delete_char_forward
+        zhm_go_beginning
+        zhm_go_end
+    )
+    for widget in $widgets; do
+        zle -N $widget
+    done
 
     # Create keymap for normal mode
     bindkey -N helix-normal-mode
-
-    # Bind normal mode keys
-    local -a normal_mode_keys=(
-        h j k l
-        w W b B e E
-        a A i I
-        c d y p P
-    )
-
-    for key in $normal_mode_keys; do
-        bindkey -M helix-normal-mode $key zhm_handle_normal_mode
-    done
+    bindkey -M helix-normal-mode 'h' zhm_move_left
+    bindkey -M helix-normal-mode 'l' zhm_move_right
+    bindkey -M helix-normal-mode 'a' zhm_append
+    bindkey -M helix-normal-mode 'A' zhm_append_end
+    bindkey -M helix-normal-mode 'i' zhm_switch_to_insert_mode
+    bindkey -M helix-normal-mode 'I' zhm_insert_start
+    bindkey -M helix-normal-mode 'y' zhm_yank
+    bindkey -M helix-normal-mode 'c' zhm_cut
+    bindkey -M helix-normal-mode 'd' zhm_delete
+    bindkey -M helix-normal-mode 'p' zhm_paste_after
+    bindkey -M helix-normal-mode 'P' zhm_paste_before
+    bindkey -M helix-normal-mode 'w' zhm_next_word
+    bindkey -M helix-normal-mode 'W' zhm_next_WORD
+    bindkey -M helix-normal-mode 'b' zhm_prev_word
+    bindkey -M helix-normal-mode 'B' zhm_prev_WORD
+    bindkey -M helix-normal-mode 'e' zhm_next_end
+    bindkey -M helix-normal-mode 'E' zhm_next_END
+    # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
     bindkey -M helix-normal-mode '^P' up-line-or-history
     bindkey -M helix-normal-mode '^N' down-line-or-history
 
-    # Register our widget
-    zle -N zhm_handle_normal_mode
-
-    # Start in insert mode with default Zsh behavior
-    bindkey -v
-
-    # Bind escape to switch to normal mode
-    bindkey -M viins '\e' zhm_switch_to_normal_mode
-
-    # Set short timeout for escape key
-    KEYTIMEOUT=1
-
-    # Bind history search in both modes
+    # Bind insert mode movement and editing keys
+    bindkey -M viins '\e' zhm_switch_to_normal_mode   # Escape
+    bindkey -M viins '\eb' zhm_backward_word_insert   # Alt-b
+    bindkey -M viins '\ef' zhm_forward_word_insert    # Alt-f
+    bindkey -M viins '\ed' zhm_forward_kill_word      # Alt-d
+    bindkey -M viins '\e[3~' zhm_delete_char_forward  # Delete
+    bindkey -M viins '\C-a' zhm_go_beginning          # Ctrl-a
+    bindkey -M viins '\C-e' zhm_go_end                # Ctrl-e
+    bindkey -M viins '\e\177' zhm_backward_kill_word  # Alt-backspace
+    bindkey -M viins '\e^?' zhm_backward_kill_word    # Alt-backspace (alternate)
+    bindkey -M viins '\e[3;3~' zhm_forward_kill_word  # Alt-delete
+    bindkey -M viins '\e\e[3~' zhm_forward_kill_word  # Alt-delete (alternate)
+    # Bind history search in insert mode
     bindkey -M viins '^R' history-incremental-search-backward
     bindkey -M viins '^S' history-incremental-search-forward
     bindkey -M viins '^P' up-line-or-history
     bindkey -M viins '^N' down-line-or-history
 
-    # Bind isearch keys
-    bindkey -M isearch '^?' backward-delete-char
-    bindkey -M isearch '^H' backward-delete-char
-    bindkey -M isearch '^W' backward-kill-word
+    # Set short timeout for escape key
+    KEYTIMEOUT=1
 
-    # Initialize insert mode
+    # Start in insert mode with default Zsh behavior
+    bindkey -v
     zhm_switch_to_insert_mode
 }
 
