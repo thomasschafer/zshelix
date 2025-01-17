@@ -7,6 +7,9 @@ typeset -g ZHM_MODE_INSERT="INSERT"
 typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
 typeset -g ZHM_MODE
 
+typeset -ga ZHM_UNDO_STATES=() # cursor_idx, anchor_idx, buffer_text
+typeset -g ZHM_UNDO_INDEX=-1
+
 # -1 means no selection
 typeset -g ZHM_ANCHOR=-1
 typeset -g ZHM_CLIPBOARD=""
@@ -15,6 +18,10 @@ typeset -g ZHM_CLIPBOARD=""
 function zhm_sign() {
     local num=$1
     echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
+}
+
+function zhm_log() {
+    echo $1 >> zhm.log
 }
 
 function zhm_safe_cursor_move() {
@@ -33,6 +40,97 @@ function zhm_safe_anchor_move() {
         return 0
     fi
     return 1
+}
+
+### Buffer state ###
+ZHM_EMPTY_BUFFER="<ZHM_EMPTY_BUFFER>"
+
+# Usage: zhm_history_append cursor_idx anchor_idx buffer_text
+function zhm_history_append() {
+    if [[ $# -ne 3 ]]; then
+        echo "Error: Requires exactly 3 arguments, found $1 $2 $3" >&2
+        return 1
+    fi
+
+    if [[ ! $1 =~ ^-?[0-9]+$ ]] || [[ ! $2 =~ ^-?[0-9]+$ ]]; then
+        echo "Error: First two arguments must be integers" >&2
+        return 1
+    fi
+
+    # truncate history at this point
+    local cut_at=$(((ZHM_UNDO_INDEX + 1) * 3))
+    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX, ZHM_UNDO_STATES=$ZHM_UNDO_STATES, cut_at=$cut_at"
+    ZHM_UNDO_STATES=(${(@)ZHM_UNDO_STATES[1,$cut_at]})
+    zhm_log "(updated) ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX, ZHM_UNDO_STATES=$ZHM_UNDO_STATES"
+    ZHM_UNDO_STATES+=($1 $2 "$3")
+    ((ZHM_UNDO_INDEX++))
+}
+
+# Outputs "<cursor_idx>\0<anchor_idx>\0<buffer_text>" with null bytes as separators
+function zhm_history_get() {
+    local start=$((ZHM_UNDO_INDEX * 3 + 1))
+
+    if [[ $start -ge ${#ZHM_UNDO_STATES[@]} ]]; then
+        echo "Error: Index $start out of range for $ZHM_UNDO_STATES" >&2
+        return 1
+    fi
+
+    local buffer_contents="${ZHM_UNDO_STATES[$start+2]}"
+    if [[ $buffer_contents == $ZHM_EMPTY_BUFFER ]]; then
+        buffer_contents=""
+    fi
+    printf '%d\0%d\0%s' ${ZHM_UNDO_STATES[$start]} ${ZHM_UNDO_STATES[$start+1]} $buffer_contents
+}
+
+function zhm_debug_logs() {
+    local start=$((ZHM_UNDO_INDEX * 3 + 1))
+    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX ZHM_UNDO_STATES=$ZHM_UNDO_STATES}\n"
+    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
+    zhm_log "cursor_idx=$cursor_idx anchor_idx=$anchor_idx buffer_text=$buffer_text #ZHM_UNDO_STATES[@]=${#ZHM_UNDO_STATES[@]}"
+}
+
+function zhm_update_buffer() {
+    zhm_log "Called zhm_update_buffer with $1 $2"
+    local save_state=$1
+    local new_buffer=${2:-""}
+    if [[ $new_buffer == $ZHM_EMPTY_BUFFER ]]; then
+        new_buffer=""
+    fi
+
+    if [[ $save_state == 1 && ($BUFFER != $new_buffer) ]]; then
+        zhm_save_state
+    fi
+    BUFFER=$new_buffer
+}
+
+function zhm_save_state() {
+    # Only save if buffer content changed
+    if [[ ${#ZHM_UNDO_STATES} -eq 0 ]] || [[ "$ZHM_UNDO_STATES[-1]" != "$BUFFER" ]]; then
+        zhm_history_append ${CURSOR:-0} $ZHM_ANCHOR ${BUFFER:-$ZHM_EMPTY_BUFFER}
+    fi
+}
+
+function zhm_undo() {
+    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX ZHM_UNDO_STATES=$ZHM_UNDO_STATES}\n"
+    # TODO: add current state before undoing
+    if ((ZHM_UNDO_INDEX > 0)); then
+        IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
+        zhm_update_buffer 0 $buffer_text
+        CURSOR=$cursor_idx
+        ZHM_ANCHOR=$anchor_idx
+        ((ZHM_UNDO_INDEX--))
+    fi
+}
+
+function zhm_redo() {
+    local history_len=$((${#ZHM_UNDO_STATES[@]} / 3))
+    if ((ZHM_UNDO_INDEX < history_len - 1 )); then
+        ((ZHM_UNDO_INDEX++))
+        IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
+        zhm_update_buffer 0 $buffer_text
+        CURSOR=$cursor_idx
+        ZHM_ANCHOR=$anchor_idx
+    fi
 }
 
 ### Selection and highlighting ###
@@ -80,6 +178,7 @@ function zhm_switch_to_insert_mode() {
     ZHM_MODE=$ZHM_MODE_INSERT
     print -n $ZHM_CURSOR_INSERT
     bindkey -v
+    zhm_save_state
 }
 
 function zhm_switch_to_normal_mode() {
@@ -120,7 +219,7 @@ function zhm_insert_start() {
 
 function zhm_delete_char_forward() {
     if ((CURSOR < $#BUFFER)); then
-        BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
+        zhm_update_buffer 1 "${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
     fi
 }
 
@@ -169,7 +268,7 @@ function zhm_backward_kill_word() {
     while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
         ((pos--))
     done
-    BUFFER="${BUFFER:0:$pos}${BUFFER:$CURSOR}"
+    zhm_update_buffer 1 "${BUFFER:0:$pos}${BUFFER:$CURSOR}"
     CURSOR=$pos
 }
 
@@ -183,7 +282,7 @@ function zhm_forward_kill_word() {
     while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
         ((pos++))
     done
-    BUFFER="${BUFFER:0:$CURSOR}${BUFFER:$pos}"
+    zhm_update_buffer 1 "${BUFFER:0:$CURSOR}${BUFFER:$pos}"
 }
 
 ### Selection operations ###
@@ -200,7 +299,7 @@ function zhm_operate_on_selection() {
     ZHM_CUT_BUFFER="${BUFFER:$start:$((end-start))}"
 
     if [[ $operation != "yank" ]]; then
-        BUFFER="${BUFFER:0:$start}${BUFFER:$end}"
+        zhm_update_buffer 1 "${BUFFER:0:$start}${BUFFER:$end}"
         CURSOR=$start
 
         case $operation in
@@ -240,7 +339,7 @@ function zhm_paste() {
 
     local paste_pos=$((before ? bounds[1] : bounds[2]))
 
-    BUFFER="${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
+    zhm_update_buffer 1 "${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
 
     local pos1=$paste_pos
     local pos2=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
@@ -437,6 +536,9 @@ function zhm_initialize() {
         zhm_delete_char_forward
         zhm_go_beginning
         zhm_go_end
+        zhm_undo
+        zhm_redo
+        zhm_debug_logs
     )
     for widget in $widgets; do
         zle -N $widget
@@ -461,6 +563,9 @@ function zhm_initialize() {
     bindkey -M helix-normal-mode 'B' zhm_prev_WORD
     bindkey -M helix-normal-mode 'e' zhm_next_end
     bindkey -M helix-normal-mode 'E' zhm_next_END
+    bindkey -M helix-normal-mode 'u' zhm_undo
+    bindkey -M helix-normal-mode 'U' zhm_redo
+    bindkey -M helix-normal-mode 'D' zhm_debug_logs
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
@@ -491,6 +596,9 @@ function zhm_initialize() {
     # Start in insert mode with default Zsh behavior
     bindkey -v
     zhm_switch_to_insert_mode
+
+    # TODO (hacky): we shouldn't need this
+    zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
 }
 
 zhm_initialize
