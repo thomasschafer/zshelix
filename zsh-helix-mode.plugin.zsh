@@ -497,18 +497,6 @@ function zhm_precmd() {
     fi
 }
 
-function zhm_bind_ascii_range() {
-    local start=$1
-    local end=$2
-    local char
-
-    for ascii in {$start..$end}; do
-        char=$(printf \\$(printf '%03o' $ascii))
-        bindkey -M helix-mode "$char" zhm_mode_handler
-    done
-}
-
-
 function zhm_initialize() {
     # Register with ZLE
     zle -N zhm_mode_handler
