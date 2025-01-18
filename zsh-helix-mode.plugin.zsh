@@ -515,7 +515,79 @@ function zhm_next_END() {
     zhm_find_word_boundary "next_end" "WORD"
 }
 
-# Precmd hook for cursor style
+### Line movement helpers ###
+function zhm_find_line_start() {
+    local pos=$1
+    local start=$pos
+
+    while ((start > 0)) && [[ ${BUFFER:$((start-1)):1} != $'\n' ]]; do
+        ((start--))
+    done
+    echo $start
+}
+
+function zhm_find_line_end() {
+    local pos=$1
+    local buffer_len=$#BUFFER
+    local end=$pos
+
+    while ((end < buffer_len)) && [[ ${BUFFER:$end:1} != $'\n' ]]; do
+        ((end++))
+    done
+    echo $end
+}
+
+function zhm_swap_cursor_anchor() {
+    local temp=$CURSOR
+    CURSOR=$ZHM_ANCHOR
+    ZHM_ANCHOR=$temp
+}
+
+### Line extension commands ###
+function zhm_extend_line_above() {
+    if ((CURSOR > ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
+        zhm_swap_cursor_anchor
+    fi
+
+    ZHM_ANCHOR=$(zhm_find_line_end $ZHM_ANCHOR)
+
+    local current_line_start=$(zhm_find_line_start $CURSOR)
+
+    if ((CURSOR != current_line_start)); then
+        CURSOR=$current_line_start
+    else {
+        if ((CURSOR > 0)); then
+            ((CURSOR--))
+            CURSOR=$(zhm_find_line_start $CURSOR)
+        fi
+    } fi
+
+    zhm_set_cursor_and_anchor $CURSOR $ZHM_ANCHOR
+}
+
+function zhm_extend_line_below() {
+    if ((CURSOR < ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
+        zhm_swap_cursor_anchor
+    fi
+
+    ZHM_ANCHOR=$(zhm_find_line_start $ZHM_ANCHOR)
+
+    local current_line_end=$(zhm_find_line_end $CURSOR)
+
+    if ((CURSOR != current_line_end)); then
+        CURSOR=$current_line_end
+    else {
+        if ((CURSOR < $#BUFFER)); then
+            # Move down one line and find its end
+            ((CURSOR++))
+            CURSOR=$(zhm_find_line_end $CURSOR)
+        fi
+    } fi
+
+    zhm_set_cursor_and_anchor $CURSOR $ZHM_ANCHOR
+}
+
+### Initialisation ###
 function zhm_precmd() {
     if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
         print -n $ZHM_CURSOR_INSERT
@@ -524,8 +596,7 @@ function zhm_precmd() {
     fi
 }
 
-# Initialization
-function zhm_initialize() {
+function zhm_initialise() {
     local -a widgets=(
         zhm_switch_to_normal_mode
         zhm_switch_to_insert_mode
@@ -557,6 +628,8 @@ function zhm_initialize() {
         zhm_debug_logs
         zhm_clear_history
         zhm_line_finish
+        zhm_extend_line_below
+        zhm_extend_line_above
     )
     for widget in $widgets; do
         zle -N $widget
@@ -586,6 +659,9 @@ function zhm_initialize() {
     bindkey -M helix-normal-mode 'u' zhm_undo
     bindkey -M helix-normal-mode 'U' zhm_redo
     bindkey -M helix-normal-mode 'D' zhm_debug_logs
+    bindkey -M helix-normal-mode 'x' zhm_extend_line_below
+    # TODO: the below should default to `extend_to_line_bounds` - override with config
+    bindkey -M helix-normal-mode 'X' zhm_extend_line_above
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
@@ -621,4 +697,4 @@ function zhm_initialize() {
     zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
 }
 
-zhm_initialize
+zhm_initialise
