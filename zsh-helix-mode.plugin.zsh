@@ -145,6 +145,17 @@ function zhm_redo() {
     fi
 }
 
+function zhm_clear_history() {
+    ZHM_UNDO_STATES=()
+    ZHM_UNDO_INDEX=-1
+    zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
+}
+
+function zhm_line_finish() {
+    zhm_clear_history
+    return 0
+}
+
 ### Selection and highlighting ###
 function zhm_reset_anchor() {
     ZHM_ANCHOR=$CURSOR
@@ -552,10 +563,14 @@ function zhm_initialize() {
         zhm_undo
         zhm_redo
         zhm_debug_logs
+        zhm_clear_history
+        zhm_line_finish
     )
     for widget in $widgets; do
         zle -N $widget
     done
+
+    zle -N zle-line-finish zhm_line_finish
 
     # Create keymap for normal mode
     bindkey -N helix-normal-mode
