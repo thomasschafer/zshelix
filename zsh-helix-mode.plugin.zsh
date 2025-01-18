@@ -60,9 +60,7 @@ function zhm_history_append() {
 
     # truncate history at this point
     local cut_at=$(((ZHM_UNDO_INDEX + 1) * 3))
-    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX, ZHM_UNDO_STATES=$ZHM_UNDO_STATES, cut_at=$cut_at"
     ZHM_UNDO_STATES=(${(@)ZHM_UNDO_STATES[1,$cut_at]})
-    zhm_log "(updated) ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX, ZHM_UNDO_STATES=$ZHM_UNDO_STATES"
     ZHM_UNDO_STATES+=($1 $2 "$3")
     ((ZHM_UNDO_INDEX++))
 }
@@ -83,15 +81,9 @@ function zhm_history_get() {
     printf '%d\0%d\0%s' ${ZHM_UNDO_STATES[$start]} ${ZHM_UNDO_STATES[$start+1]} $buffer_contents
 }
 
-function zhm_debug_logs() {
-    local start=$((ZHM_UNDO_INDEX * 3 + 1))
-    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX ZHM_UNDO_STATES=$ZHM_UNDO_STATES}\n"
-    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
-    zhm_log "cursor_idx=$cursor_idx anchor_idx=$anchor_idx buffer_text=$buffer_text #ZHM_UNDO_STATES[@]=${#ZHM_UNDO_STATES[@]}"
-}
+function zhm_debug_logs() {}
 
 function zhm_update_buffer() {
-    zhm_log "Called zhm_update_buffer with $1 $2"
     local save_state=$1
     local new_buffer=${2:-""}
     if [[ $new_buffer == $ZHM_EMPTY_BUFFER ]]; then
