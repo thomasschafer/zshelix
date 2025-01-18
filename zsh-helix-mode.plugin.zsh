@@ -1,4 +1,5 @@
 typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
+
 typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
 typeset -g ZHM_CURSOR_INSERT='\e[6 q'
 typeset -g ZHM_MODE_NORMAL="NORMAL"
@@ -111,25 +112,36 @@ function zhm_save_state() {
 }
 
 function zhm_undo() {
-    zhm_log "ZHM_UNDO_INDEX=$ZHM_UNDO_INDEX ZHM_UNDO_STATES=$ZHM_UNDO_STATES}\n"
-    # TODO: add current state before undoing
-    if ((ZHM_UNDO_INDEX > 0)); then
-        IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
-        zhm_update_buffer 0 $buffer_text
-        CURSOR=$cursor_idx
-        ZHM_ANCHOR=$anchor_idx
-        ((ZHM_UNDO_INDEX--))
+    (( ZHM_UNDO_INDEX <= 0 )) && return
+
+    local buffer_start=$BUFFER
+
+    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
+    zhm_update_buffer 0 $buffer_text
+    CURSOR=$cursor_idx
+    ZHM_ANCHOR=$anchor_idx
+
+    ((ZHM_UNDO_INDEX--))
+
+    if [[ $buffer_start == $BUFFER ]]; then
+        zhm_undo
     fi
 }
 
 function zhm_redo() {
-    local history_len=$((${#ZHM_UNDO_STATES[@]} / 3))
-    if ((ZHM_UNDO_INDEX < history_len - 1 )); then
-        ((ZHM_UNDO_INDEX++))
-        IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
-        zhm_update_buffer 0 $buffer_text
-        CURSOR=$cursor_idx
-        ZHM_ANCHOR=$anchor_idx
+    local history_len=$(( ${#ZHM_UNDO_STATES[@]} / 3 ))
+    (( ZHM_UNDO_INDEX >= history_len - 1 )) && return
+
+    ((ZHM_UNDO_INDEX++))
+
+    local buffer_start=$BUFFER
+    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
+    zhm_update_buffer 0 $buffer_text
+    CURSOR=$cursor_idx
+    ZHM_ANCHOR=$anchor_idx
+
+    if [[ $buffer_start == $BUFFER ]]; then
+        zhm_redo
     fi
 }
 
@@ -186,6 +198,7 @@ function zhm_switch_to_normal_mode() {
     ZHM_MODE=$ZHM_MODE_NORMAL
     print -n $ZHM_CURSOR_NORMAL
     bindkey -A helix-normal-mode main
+    zhm_save_state
 }
 
 ### Basic movement and editing ###
