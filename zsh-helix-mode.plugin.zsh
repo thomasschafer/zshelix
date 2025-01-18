@@ -187,6 +187,14 @@ function zhm_get_selection_bounds() {
     fi
 }
 
+function zhm_collapse_selection() {
+    zhm_set_cursor_and_anchor $CURSOR $CURSOR
+}
+
+function zhm_flip_selections() {
+    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR
+}
+
 ### Mode switching ###
 function zhm_switch_to_insert_mode() {
     zhm_remove_highlight
@@ -630,6 +638,8 @@ function zhm_initialise() {
         zhm_line_finish
         zhm_extend_line_below
         zhm_extend_line_above
+        zhm_collapse_selection
+        zhm_flip_selections
     )
     for widget in $widgets; do
         zle -N $widget
@@ -662,6 +672,8 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'x' zhm_extend_line_below
     # TODO: the below should default to `extend_to_line_bounds` - override with config
     bindkey -M helix-normal-mode 'X' zhm_extend_line_above
+    bindkey -M helix-normal-mode ';' zhm_collapse_selection
+    bindkey -M helix-normal-mode '\e;' zhm_flip_selections
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
