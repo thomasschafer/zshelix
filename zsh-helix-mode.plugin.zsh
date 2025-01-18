@@ -120,8 +120,7 @@ function zhm_undo() {
 
     IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
     zhm_update_buffer 0 $buffer_text
-    CURSOR=$cursor_idx
-    ZHM_ANCHOR=$anchor_idx
+    zhm_set_cursor_and_anchor $cursor_idx $anchor_idx
 
     ((ZHM_UNDO_INDEX--))
 
@@ -139,8 +138,7 @@ function zhm_redo() {
     local buffer_start=$BUFFER
     IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
     zhm_update_buffer 0 $buffer_text
-    CURSOR=$cursor_idx
-    ZHM_ANCHOR=$anchor_idx
+    zhm_set_cursor_and_anchor $cursor_idx $anchor_idx
 
     if [[ $buffer_start == $BUFFER ]]; then
         zhm_redo
