@@ -21,6 +21,14 @@ function zhm_sign() {
     echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
 }
 
+function zhm_max() {
+    echo $(( $1 > $2 ? $1 : $2 ))
+}
+
+function zhm_min() {
+    echo $(( $1 < $2 ? $1 : $2 ))
+}
+
 function zhm_log() {
     echo $1 >> zhm.log
 }
@@ -105,6 +113,8 @@ function zhm_save_state() {
 
 function zhm_undo() {
     (( ZHM_UNDO_INDEX <= 0 )) && return
+
+    # TODO: if at end of history, save state (zhm_save_state)
 
     local buffer_start=$BUFFER
 
@@ -197,6 +207,7 @@ function zhm_flip_selections() {
 
 ### Mode switching ###
 function zhm_switch_to_insert_mode() {
+    # TODO: don't lose highlight
     zhm_remove_highlight
     ZHM_MODE=$ZHM_MODE_INSERT
     print -n $ZHM_CURSOR_INSERT
@@ -224,7 +235,9 @@ function zhm_move_right() {
 }
 
 function zhm_append() {
-    zhm_safe_cursor_move $((CURSOR + 1))
+    # TODO: after exiting to normal mode, move cursor back one
+    local new_cursor=$(( $(zhm_max CURSOR ZHM_ANCHOR) + 1))
+    zhm_safe_cursor_move $new_cursor
     zhm_switch_to_insert_mode
     zhm_reset_anchor
 }
@@ -240,6 +253,14 @@ function zhm_insert_start() {
     zhm_switch_to_insert_mode
     zhm_reset_anchor
 }
+
+function zhm_insert_mode() {
+    local new_cursor=$(zhm_min CURSOR ZHM_ANCHOR)
+    zhm_safe_cursor_move $new_cursor
+    zhm_switch_to_insert_mode
+    zhm_reset_anchor
+}
+
 
 function zhm_delete_char_forward() {
     if ((CURSOR < $#BUFFER)); then
@@ -612,6 +633,7 @@ function zhm_initialise() {
         zhm_move_right
         zhm_append
         zhm_append_end
+        zhm_insert_mode
         zhm_insert_start
         zhm_yank
         zhm_cut
@@ -653,7 +675,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'l' zhm_move_right
     bindkey -M helix-normal-mode 'a' zhm_append
     bindkey -M helix-normal-mode 'A' zhm_append_end
-    bindkey -M helix-normal-mode 'i' zhm_switch_to_insert_mode
+    bindkey -M helix-normal-mode 'i' zhm_insert_mode
     bindkey -M helix-normal-mode 'I' zhm_insert_start
     bindkey -M helix-normal-mode 'y' zhm_yank
     bindkey -M helix-normal-mode 'c' zhm_cut
