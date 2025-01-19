@@ -179,10 +179,8 @@ function zhm_set_cursor_and_anchor() {
 
     local cursor=$1
     local anchor=$2
-    zhm_log "Attempting to set cursor=$cursor anchor=$anchor"
     zhm_safe_cursor_move $cursor
     zhm_safe_anchor_move $anchor
-    zhm_log "Done - set CURSOR=$CURSOR ZHM_ANCHOR=$ZHM_ANCHOR"
 
     if ((ZHM_ANCHOR >= 0)); then
         if ((CURSOR >= ZHM_ANCHOR)); then
@@ -200,7 +198,6 @@ function zhm_remove_highlight() {
 }
 
 function zhm_get_selection_bounds() {
-    zhm_log "CURSOR=$CURSOR ZHM_ANCHOR=$ZHM_ANCHOR"
     if ((ZHM_ANCHOR < 0)); then
         return 1
     fi
@@ -384,8 +381,6 @@ function zhm_delete_selection() {
 }
 
 function zhm_paste() {
-    zhm_log "BEFORE: buffer_len = ${#BUFFER}, cursor = $CURSOR"
-    local cursor_is_after_end=$(( CURSOR == ${#BUFFER} ))
     local before=$1  # 1 for paste before, 0 for paste after
 
     if [[ -z "$ZHM_CUT_BUFFER" ]]; then
@@ -397,12 +392,14 @@ function zhm_paste() {
     fi
 
     local paste_pos=$((before ? bounds[1] : bounds[2]))
+    if ((paste_pos > ${#BUFFER})); then
+        ((paste_pos--))
+    fi
 
     zhm_update_buffer 1 "${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
 
     local pos1=$paste_pos
     local pos2=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
-    zhm_log "AFTER: cursor_is_after_end=$cursor_is_after_end, buffer_len = ${#BUFFER}, cursor = $CURSOR, pos1=$pos1, pos2=$pos2, bounds=$bounds"
 
     # Select pasted contents
     local ordering=$(zhm_sign $((CURSOR - ZHM_ANCHOR)))
@@ -415,7 +412,6 @@ function zhm_paste() {
         anchor=$pos2
     fi
     zhm_set_cursor_and_anchor $cursor $anchor
-    zhm_log "FINAL: CURSOR=$CURSOR, ZHM_ANCHOR=$ZHM_ANCHOR"
 }
 
 function zhm_paste_after() {
