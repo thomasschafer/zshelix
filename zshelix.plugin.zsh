@@ -54,7 +54,6 @@ function zhm_safe_anchor_move() {
 ### Buffer state ###
 ZHM_EMPTY_BUFFER="<ZHM_EMPTY_BUFFER>"
 
-# Usage: zhm_history_append cursor_idx anchor_idx buffer_text
 function zhm_history_append() {
     if [[ $# -ne 3 ]]; then
         echo "Error: Requires exactly 3 arguments, found $1 $2 $3" >&2
@@ -66,27 +65,38 @@ function zhm_history_append() {
         return 1
     fi
 
+    # Only base64 encode non-empty buffer content
+    local encoded_buffer
+    if [[ -n $3 && $3 != $ZHM_EMPTY_BUFFER ]]; then
+        encoded_buffer=$(print -n "$3" | base64)
+    else
+        encoded_buffer=$ZHM_EMPTY_BUFFER
+    fi
+
     # truncate history at this point
     local cut_at=$(((ZHM_UNDO_INDEX + 1) * 3))
     ZHM_UNDO_STATES=(${(@)ZHM_UNDO_STATES[1,$cut_at]})
-    ZHM_UNDO_STATES+=($1 $2 "$3")
+    ZHM_UNDO_STATES+=($1 $2 $encoded_buffer)
     ((ZHM_UNDO_INDEX++))
 }
 
-# Outputs "<cursor_idx>\0<anchor_idx>\0<buffer_text>" with null bytes as separators
-function zhm_history_get() {
+function zhm_history_get_state() {
     local start=$((ZHM_UNDO_INDEX * 3 + 1))
-
     if [[ $start -ge ${#ZHM_UNDO_STATES[@]} ]]; then
-        echo "Error: Index $start out of range for $ZHM_UNDO_STATES" >&2
+        echo "Error: Index $start out of range" >&2
         return 1
     fi
 
-    local buffer_contents="${ZHM_UNDO_STATES[$start+2]}"
-    if [[ $buffer_contents == $ZHM_EMPTY_BUFFER ]]; then
-        buffer_contents=""
+    typeset -g _zhm_state_cursor=${ZHM_UNDO_STATES[$start]}
+    typeset -g _zhm_state_anchor=${ZHM_UNDO_STATES[$start+1]}
+    local encoded_buffer=${ZHM_UNDO_STATES[$start+2]}
+
+    if [[ $encoded_buffer == $ZHM_EMPTY_BUFFER ]]; then
+        typeset -g _zhm_state_buffer=""
+    else
+        typeset -g _zhm_state_buffer=$(base64 -d <<< $encoded_buffer)
     fi
-    printf '%d\0%d\0%s' ${ZHM_UNDO_STATES[$start]} ${ZHM_UNDO_STATES[$start+1]} $buffer_contents
+    return 0
 }
 
 function zhm_debug_logs() {}
@@ -114,18 +124,16 @@ function zhm_save_state() {
 function zhm_undo() {
     (( ZHM_UNDO_INDEX <= 0 )) && return
 
-    # TODO: if at end of history, save state (zhm_save_state)
-
     local buffer_start=$BUFFER
 
-    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
-    zhm_update_buffer 0 $buffer_text
-    zhm_set_cursor_and_anchor $cursor_idx $anchor_idx
+    if zhm_history_get_state; then
+        zhm_update_buffer 0 "$_zhm_state_buffer"
+        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor
+        ((ZHM_UNDO_INDEX--))
 
-    ((ZHM_UNDO_INDEX--))
-
-    if [[ $buffer_start == $BUFFER ]]; then
-        zhm_undo
+        if [[ $buffer_start == $BUFFER ]]; then
+            zhm_undo
+        fi
     fi
 }
 
@@ -136,12 +144,14 @@ function zhm_redo() {
     ((ZHM_UNDO_INDEX++))
 
     local buffer_start=$BUFFER
-    IFS=$'\0' read -r cursor_idx anchor_idx buffer_text <<< $(zhm_history_get)
-    zhm_update_buffer 0 $buffer_text
-    zhm_set_cursor_and_anchor $cursor_idx $anchor_idx
 
-    if [[ $buffer_start == $BUFFER ]]; then
-        zhm_redo
+    if zhm_history_get_state; then
+        zhm_update_buffer 0 "$_zhm_state_buffer"
+        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor
+
+        if [[ $buffer_start == $BUFFER ]]; then
+            zhm_redo
+        fi
     fi
 }
 
