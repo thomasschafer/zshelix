@@ -1,3 +1,3 @@
-# zsh-helix-mode
+# zshelix
 
 WIP
