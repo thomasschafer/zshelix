@@ -193,6 +193,16 @@ function zhm_set_cursor_and_anchor() {
     fi
 }
 
+function zhm_set_cursor() {
+    local new_pos=$1
+    zhm_set_cursor_and_anchor $new_pos $ZHM_ANCHOR
+}
+
+function zhm_set_anchor() {
+    local new_pos=$1
+    zhm_set_cursor_and_anchor $CURSOR $new_pos
+}
+
 function zhm_remove_highlight() {
     region_highlight=()
 }
@@ -279,11 +289,11 @@ function zhm_delete_char_forward() {
 }
 
 function zhm_goto_line_start() {
-    CURSOR=0
+    zhm_set_cursor 0
 }
 
 function zhm_goto_line_end() {
-    CURSOR=$#BUFFER
+    zhm_set_cursor $#BUFFER
 }
 
 ### Word operations ###
@@ -297,7 +307,7 @@ function zhm_move_prev_word_start() {
     while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
         ((pos--))
     done
-    CURSOR=$pos
+    zhm_set_cursor $pos
 }
 
 function zhm_move_next_word_start() {
@@ -310,7 +320,7 @@ function zhm_move_next_word_start() {
     while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
         ((pos++))
     done
-    CURSOR=$pos
+    zhm_set_cursor $pos
 }
 
 function zhm_delete_word_backward() {
@@ -324,7 +334,7 @@ function zhm_delete_word_backward() {
         ((pos--))
     done
     zhm_update_buffer 1 "${BUFFER:0:$pos}${BUFFER:$CURSOR}"
-    CURSOR=$pos
+    zhm_set_cursor $pos
 }
 
 function zhm_delete_word_forward() {
@@ -579,9 +589,7 @@ function zhm_find_line_end() {
 }
 
 function zhm_swap_cursor_anchor() {
-    local temp=$CURSOR
-    CURSOR=$ZHM_ANCHOR
-    ZHM_ANCHOR=$temp
+    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR
 }
 
 ### Line extension commands ###
@@ -590,20 +598,21 @@ function zhm_extend_line_below() {
         zhm_swap_cursor_anchor
     fi
 
-    ZHM_ANCHOR=$(zhm_find_line_start $ZHM_ANCHOR)
+    local new_anchor=$(zhm_find_line_start $ZHM_ANCHOR)
 
     local current_line_end=$(zhm_find_line_end $CURSOR)
 
-    if ((CURSOR != current_line_end)); then
-        CURSOR=$current_line_end
-    else {
-        if ((CURSOR < $#BUFFER)); then
-            ((CURSOR++))
-            CURSOR=$(zhm_find_line_end $CURSOR)
+    local new_cursor=$CURSOR
+    if ((new_cursor != current_line_end)); then
+        new_cursor=$current_line_end
+    else 
+        if ((new_cursor < $#BUFFER)); then
+            ((new_cursor++))
+            new_cursor=$(zhm_find_line_end $new_cursor)
         fi
-    } fi
+    fi
 
-    zhm_set_cursor_and_anchor $CURSOR $ZHM_ANCHOR
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor
 }
 
 function zhm_extend_to_line_bounds() {
@@ -611,21 +620,21 @@ function zhm_extend_to_line_bounds() {
         zhm_swap_cursor_anchor
     fi
 
-    ZHM_ANCHOR=$(zhm_find_line_end $ZHM_ANCHOR)
+    local new_anchor=$(zhm_find_line_end $ZHM_ANCHOR)
 
     local current_line_start=$(zhm_find_line_start $CURSOR)
 
-    if ((CURSOR != current_line_start)); then
-        CURSOR=$current_line_start
-    else {
-            # Move down one line and find its end
-        if ((CURSOR > 0)); then
-            ((CURSOR--))
-            CURSOR=$(zhm_find_line_start $CURSOR)
+    local new_cursor=$CURSOR
+    if ((new_cursor != current_line_start)); then
+        new_cursor=$current_line_start
+    else
+        if ((new_cursor > 0)); then
+            ((new_cursor--))
+            new_cursor=$(zhm_find_line_start $new_cursor)
         fi
-    } fi
+    fi
 
-    zhm_set_cursor_and_anchor $CURSOR $ZHM_ANCHOR
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor
 }
 
 function zhm_select_all() {
@@ -719,6 +728,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode '^P' up-line-or-history
     bindkey -M helix-normal-mode '^N' down-line-or-history
 
+    # TODO: alt-backspace leaves selection trail, presumably others do too
     # Bind insert mode movement and editing keys
     bindkey -M viins '\e' zhm_normal_mode
     bindkey -M viins '\eb' zhm_move_prev_word_start
