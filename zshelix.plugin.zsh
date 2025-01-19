@@ -255,6 +255,16 @@ function zhm_move_char_right() {
     zhm_set_cursor_and_anchor $pos $pos
 }
 
+function zhm_move_visual_line_down() {
+    zle down-line-or-history
+    zhm_set_anchor $CURSOR
+}
+
+function zhm_move_visual_line_up() {
+    zle up-line-or-history
+    zhm_set_anchor $CURSOR
+}
+
 function zhm_append_mode() {
     # TODO: after exiting to normal mode, move cursor back one
     local pos=$(( $(zhm_max CURSOR ZHM_ANCHOR) + 1))
@@ -688,16 +698,19 @@ function zhm_initialise() {
         zhm_collapse_selection
         zhm_flip_selections
         zhm_select_all
+        zhm_line_finish
+        zhm_move_visual_line_down
+        zhm_move_visual_line_up
     )
     for widget in $widgets; do
         zle -N $widget
     done
 
-    zle -N zle-line-finish zhm_line_finish
-
     bindkey -N helix-normal-mode
     bindkey -M helix-normal-mode 'h' zhm_move_char_left
     bindkey -M helix-normal-mode 'l' zhm_move_char_right
+    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up
+    bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down
     bindkey -M helix-normal-mode 'a' zhm_append_mode
     bindkey -M helix-normal-mode 'A' zhm_insert_at_line_end
     bindkey -M helix-normal-mode 'i' zhm_insert_mode
