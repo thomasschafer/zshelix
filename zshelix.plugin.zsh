@@ -1,11 +1,14 @@
 typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
 
-typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
-typeset -g ZHM_CURSOR_INSERT='\e[6 q'
+typeset -g ZHM_CURSOR_NORMAL=$'\e]12;#b8c0e0\a\e[2 q'
+typeset -g ZHM_CURSOR_INSERT=$'\e]12;#f4dbd6\a\e[2 q'
+typeset -g ZHM_CURSOR_SELECT=$'\e]12;#f5a97f\a\e[2 q'
+
 typeset -g ZHM_MODE_NORMAL="NORMAL"
 typeset -g ZHM_MODE_INSERT="INSERT"
+typeset -g ZHM_MODE_SELECT="SELECT"
 
-typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1)
+typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1 $ZHM_MODE_SELECT 1)
 typeset -g ZHM_MODE
 
 typeset -ga ZHM_UNDO_STATES=() # cursor_idx, anchor_idx, buffer_text
@@ -236,10 +239,22 @@ function zhm_insert_mode_impl() {
     zhm_save_state
 }
 
+# TODO: when entering and exiting insert mode:
+    # zhm_set_cursor_and_anchor $CURSOR $CURSOR
+    # zhm_save_state
+
+
 function zhm_normal_mode() {
-    zhm_set_cursor_and_anchor $CURSOR $CURSOR
     ZHM_MODE=$ZHM_MODE_NORMAL
     print -n $ZHM_CURSOR_NORMAL
+    bindkey -A helix-normal-mode main
+    zhm_save_state
+}
+
+function zhm_select_mode() {
+    ZHM_MODE=$ZHM_MODE_SELECT
+    print -n $ZHM_CURSOR_SELECT
+    # TODO: do we need a helix-visual-mode?
     bindkey -A helix-normal-mode main
     zhm_save_state
 }
@@ -443,6 +458,7 @@ function zhm_paste_before() {
 }
 
 ### Word boundary navigation ###
+# TODO: this doesn't stop at newlines
 function zhm_find_word_boundary() {
     local motion=$1    # next_word | next_end | prev_word
     local word_type=$2 # word | WORD
@@ -615,7 +631,7 @@ function zhm_extend_line_below() {
     local new_cursor=$CURSOR
     if ((new_cursor != current_line_end)); then
         new_cursor=$current_line_end
-    else 
+    else
         if ((new_cursor < $#BUFFER)); then
             ((new_cursor++))
             new_cursor=$(zhm_find_line_end $new_cursor)
@@ -664,6 +680,7 @@ function zhm_initialise() {
     local -a widgets=(
         zhm_normal_mode
         zhm_insert_mode
+        zhm_select_mode
         zhm_move_char_left
         zhm_move_char_right
         zhm_append_mode
@@ -735,6 +752,9 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode ';' zhm_collapse_selection
     bindkey -M helix-normal-mode '\e;' zhm_flip_selections
     bindkey -M helix-normal-mode '%' zhm_select_all
+    bindkey -M helix-normal-mode 'v' zhm_select_mode
+    bindkey -M helix-normal-mode '\e' zhm_normal_mode
+
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
@@ -772,3 +792,7 @@ function zhm_initialise() {
 }
 
 zhm_initialise
+
+# TODO:
+# - Why are keypresses slow now? E.g. when moving between modes
+# - ADD TESTS!
