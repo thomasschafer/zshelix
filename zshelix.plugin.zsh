@@ -624,6 +624,10 @@ function zhm_extend_to_line_bounds() {
     zhm_set_cursor_and_anchor $CURSOR $ZHM_ANCHOR
 }
 
+function zhm_select_all() {
+    zhm_set_cursor_and_anchor $#BUFFER 0
+}
+
 ### Initialisation ###
 function zhm_precmd() {
     if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
@@ -670,6 +674,7 @@ function zhm_initialise() {
         zhm_extend_to_line_bounds
         zhm_collapse_selection
         zhm_flip_selections
+        zhm_select_all
     )
     for widget in $widgets; do
         zle -N $widget
@@ -703,6 +708,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'X' zhm_extend_to_line_bounds
     bindkey -M helix-normal-mode ';' zhm_collapse_selection
     bindkey -M helix-normal-mode '\e;' zhm_flip_selections
+    bindkey -M helix-normal-mode '%' zhm_select_all
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
     bindkey -M helix-normal-mode '^S' history-incremental-search-forward
