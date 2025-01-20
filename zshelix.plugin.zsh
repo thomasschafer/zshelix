@@ -1,15 +1,19 @@
 typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
 
-typeset -g ZHM_CURSOR_NORMAL=$'\e]12;#b8c0e0\a\e[2 q'
-typeset -g ZHM_CURSOR_INSERT=$'\e]12;#f4dbd6\a\e[2 q'
-typeset -g ZHM_CURSOR_SELECT=$'\e]12;#f5a97f\a\e[2 q'
+typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
+typeset -g ZHM_CURSOR_INSERT='\e[6 q'
+typeset -g ZHM_CURSOR_SELECT='\e[4 q'
+
+# typeset -g ZHM_CURSOR_NORMAL=$'\e[2 q\e]12;#b8c0e0\a'
+# typeset -g ZHM_CURSOR_INSERT=$'\e[6 q\e]12;#f4dbd6\a'
+# typeset -g ZHM_CURSOR_SELECT=$'\e[2 q\e]12;#f5a97f\a'
 
 typeset -g ZHM_MODE_NORMAL="NORMAL"
 typeset -g ZHM_MODE_INSERT="INSERT"
 typeset -g ZHM_MODE_SELECT="SELECT"
 
 typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1 $ZHM_MODE_SELECT 1)
-typeset -g ZHM_MODE
+typeset -g ZHM_MODE=$ZHM_MODE_INSERT
 
 typeset -ga ZHM_UNDO_STATES=() # cursor_idx, anchor_idx, buffer_text
 typeset -g ZHM_UNDO_INDEX=-1
@@ -234,7 +238,7 @@ function zhm_insert_mode_impl() {
     # TODO: don't lose highlight
     zhm_remove_highlight
     ZHM_MODE=$ZHM_MODE_INSERT
-    print -n $ZHM_CURSOR_INSERT
+    zhm_print_cursor
     bindkey -v
     zhm_save_state
 }
@@ -246,15 +250,19 @@ function zhm_insert_mode_impl() {
 
 function zhm_normal_mode() {
     ZHM_MODE=$ZHM_MODE_NORMAL
-    print -n $ZHM_CURSOR_NORMAL
+    zhm_print_cursor
     bindkey -A helix-normal-mode main
     zhm_save_state
 }
 
-function zhm_select_mode() {
-    ZHM_MODE=$ZHM_MODE_SELECT
-    print -n $ZHM_CURSOR_SELECT
-    # TODO: do we need a helix-visual-mode?
+function zhm_select_mode_flip() {
+    if [[ "$ZHM_MODE" == "$ZHM_MODE_SELECT" ]]; then
+        ZHM_MODE=$ZHM_MODE_NORMAL
+    else
+        ZHM_MODE=$ZHM_MODE_SELECT
+    fi
+    zhm_print_cursor
+    # TODO: do we need a helix-select-mode?
     bindkey -A helix-normal-mode main
     zhm_save_state
 }
@@ -668,19 +676,36 @@ function zhm_select_all() {
 }
 
 ### Initialisation ###
+function zhm_print_cursor() {
+    local cursor=
+    case $ZHM_MODE in
+        $ZHM_MODE_INSERT)
+            cursor=$ZHM_CURSOR_INSERT
+            ;;
+        $ZHM_MODE_NORMAL)
+            cursor=$ZHM_CURSOR_NORMAL
+            ;;
+        $ZHM_MODE_SELECT)
+            cursor=$ZHM_CURSOR_SELECT
+            ;;
+        *)
+            echo "Error: Invalid mode '$ZHM_MODE'" >&2
+            return 1
+            ;;
+    esac
+
+    print -n $cursor
+}
+
 function zhm_precmd() {
-    if [[ $ZHM_MODE == $ZHM_MODE_INSERT ]]; then
-        print -n $ZHM_CURSOR_INSERT
-    else
-        print -n $ZHM_CURSOR_NORMAL
-    fi
+    zhm_print_cursor
 }
 
 function zhm_initialise() {
     local -a widgets=(
         zhm_normal_mode
         zhm_insert_mode
-        zhm_select_mode
+        zhm_select_mode_flip
         zhm_move_char_left
         zhm_move_char_right
         zhm_append_mode
@@ -752,7 +777,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode ';' zhm_collapse_selection
     bindkey -M helix-normal-mode '\e;' zhm_flip_selections
     bindkey -M helix-normal-mode '%' zhm_select_all
-    bindkey -M helix-normal-mode 'v' zhm_select_mode
+    bindkey -M helix-normal-mode 'v' zhm_select_mode_flip
     bindkey -M helix-normal-mode '\e' zhm_normal_mode
 
     # Bind normal mode history search
