@@ -12,6 +12,9 @@ typeset -g ZHM_MODE_NORMAL="NORMAL"
 typeset -g ZHM_MODE_INSERT="INSERT"
 typeset -g ZHM_MODE_SELECT="SELECT"
 
+typeset -g ZHM_MOVEMENT_MOVE="MOVEMENT_MOVE"
+typeset -g ZHM_MOVEMENT_EXTEND="MOVEMENT_EXTEND"
+
 typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1 $ZHM_MODE_SELECT 1)
 typeset -g ZHM_MODE=$ZHM_MODE_INSERT
 
@@ -58,7 +61,7 @@ ZHM_EMPTY_BUFFER="<ZHM_EMPTY_BUFFER>"
 
 function zhm_history_append() {
     if [[ $# -ne 3 ]]; then
-        echo "Error: Requires exactly 3 arguments, found $1 $2 $3" >&2
+        echo "Error: Requires exactly 3 arguments, found $*" >&2
         return 1
     fi
 
@@ -130,7 +133,7 @@ function zhm_undo() {
 
     if zhm_history_get_state; then
         zhm_update_buffer 0 "$_zhm_state_buffer"
-        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor
+        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor $ZHM_MOVEMENT_MOVE
         ((ZHM_UNDO_INDEX--))
 
         if [[ $buffer_start == $BUFFER ]]; then
@@ -149,7 +152,7 @@ function zhm_redo() {
 
     if zhm_history_get_state; then
         zhm_update_buffer 0 "$_zhm_state_buffer"
-        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor
+        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor $ZHM_MOVEMENT_MOVE
 
         if [[ $buffer_start == $BUFFER ]]; then
             zhm_redo
@@ -184,10 +187,31 @@ function zhm_set_cursor_and_anchor() {
         ZHM_ANCHOR=$(zhm_clamp $new_pos 0 $upper_bound)
     }
 
+    if [[ $# -ne 3 ]]; then
+        echo "Error: Requires exactly 3 arguments, found $*" >&2
+        return 1
+    fi
+
     local cursor=$1
     local anchor=$2
+    local movement_type=$3
+
     zhm_safe_cursor_move $cursor
-    zhm_safe_anchor_move $anchor
+
+    case $movement_type in
+        $ZHM_MOVEMENT_MOVE)
+            zhm_safe_anchor_move $anchor
+            ;;
+        $ZHM_MOVEMENT_EXTEND)
+            if [[ "$ZHM_MODE" != "$ZHM_MODE_SELECT" ]]; then
+                zhm_safe_anchor_move $anchor
+            fi
+            ;;
+        *)
+            echo "Invalid movement type: $movement_type" >&2
+            return 1
+            ;;
+    esac
 
     if ((ZHM_ANCHOR >= 0)); then
         if ((CURSOR >= ZHM_ANCHOR)); then
@@ -201,13 +225,24 @@ function zhm_set_cursor_and_anchor() {
 }
 
 function zhm_set_cursor() {
+    if [[ $# -ne 2 ]]; then
+        echo "Error: Requires exactly 1 argument, found $*" >&2
+        return 1
+    fi
+
     local new_pos=$1
-    zhm_set_cursor_and_anchor $new_pos $ZHM_ANCHOR
+    zhm_set_cursor_and_anchor $new_pos $ZHM_ANCHOR $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_set_anchor() {
+    if [[ $# -ne 2 ]]; then
+        echo "Error: Requires exactly 2 arguments, found $*" >&2
+        return 1
+    fi
+
     local new_pos=$1
-    zhm_set_cursor_and_anchor $CURSOR $new_pos
+    local movement_type=$3
+    zhm_set_cursor_and_anchor $CURSOR $new_pos $movement_type
 }
 
 function zhm_remove_highlight() {
@@ -226,11 +261,11 @@ function zhm_get_selection_bounds() {
 }
 
 function zhm_collapse_selection() {
-    zhm_set_cursor_and_anchor $CURSOR $CURSOR
+    zhm_set_cursor_and_anchor $CURSOR $CURSOR $ZHM_MOVEMENT_MOVE
 }
 
 function zhm_flip_selections() {
-    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR
+    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR $ZHM_MOVEMENT_MOVE
 }
 
 ### Mode switching ###
@@ -270,47 +305,47 @@ function zhm_select_mode_flip() {
 ### Basic movement and editing ###
 function zhm_move_char_left() {
     local pos=$((CURSOR - 1))
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_move_char_right() {
     local pos=$((CURSOR + 1))
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_move_visual_line_down() {
     zle down-line-or-history
-    zhm_set_anchor $CURSOR
+    zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_move_visual_line_up() {
     zle up-line-or-history
-    zhm_set_anchor $CURSOR
+    zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_append_mode() {
     # TODO: after exiting to normal mode, move cursor back one
     local pos=$(( $(zhm_max CURSOR ZHM_ANCHOR) + 1))
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
     zhm_insert_mode_impl
 
 }
 
 function zhm_insert_at_line_end() {
     local pos=$#BUFFER
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_MOVE
     zhm_insert_mode_impl
 }
 
 function zhm_insert_at_line_start() {
     local pos=0
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_MOVE
     zhm_insert_mode_impl
 }
 
 function zhm_insert_mode() {
     local pos=$(zhm_min CURSOR ZHM_ANCHOR)
-    zhm_set_cursor_and_anchor $pos $pos
+    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
     zhm_insert_mode_impl
 }
 
@@ -322,40 +357,14 @@ function zhm_delete_char_forward() {
 }
 
 function zhm_goto_line_start() {
-    zhm_set_cursor 0
+    zhm_set_cursor_and_anchor 0 0 $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_goto_line_end() {
-    zhm_set_cursor $#BUFFER
+    zhm_set_cursor_and_anchor $#BUFFER $#BUFFER $ZHM_MOVEMENT_EXTEND
 }
 
 ### Word operations ###
-function zhm_move_prev_word_start() {
-    local pos=$CURSOR
-    # Skip any spaces immediately before cursor
-    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    # Then skip until we hit a space or start of line
-    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    zhm_set_cursor $pos
-}
-
-function zhm_move_next_word_start() {
-    local pos=$CURSOR
-    # Skip current word if we're in one
-    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    # Skip spaces
-    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    zhm_set_cursor $pos
-}
-
 function zhm_delete_word_backward() {
     local pos=$CURSOR
     # Skip any spaces immediately before cursor
@@ -398,7 +407,7 @@ function zhm_operate_on_selection() {
 
     if [[ $operation != "yank" ]]; then
         zhm_update_buffer 1 "${BUFFER:0:$start}${BUFFER:$end}"
-        zhm_set_cursor_and_anchor $start $start
+        zhm_set_cursor_and_anchor $start $start $ZHM_MOVEMENT_MOVE
 
         case $operation in
             "cut")
@@ -454,7 +463,9 @@ function zhm_paste() {
         cursor=$pos1
         anchor=$pos2
     fi
-    zhm_set_cursor_and_anchor $cursor $anchor
+    zhm_set_cursor_and_anchor $cursor $anchor $ZHM_MOVEMENT_MOVE
+
+    zhm_normal_mode
 }
 
 function zhm_paste_after() {
@@ -573,7 +584,7 @@ function zhm_find_word_boundary() {
         new_anchor=$prev_cursor
     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_move_next_word_start() {
@@ -623,7 +634,7 @@ function zhm_find_line_end() {
 }
 
 function zhm_swap_cursor_anchor() {
-    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR
+    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR $ZHM_MOVEMENT_MOVE
 }
 
 ### Line extension commands ###
@@ -646,7 +657,7 @@ function zhm_extend_line_below() {
         fi
     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_extend_to_line_bounds() {
@@ -668,11 +679,11 @@ function zhm_extend_to_line_bounds() {
         fi
     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_select_all() {
-    zhm_set_cursor_and_anchor $#BUFFER 0
+    zhm_set_cursor_and_anchor $#BUFFER 0 $ZHM_MOVEMENT_EXTEND
 }
 
 ### Initialisation ###
