@@ -225,7 +225,7 @@ function zhm_set_cursor_and_anchor() {
 }
 
 function zhm_set_cursor() {
-    if [[ $# -ne 2 ]]; then
+    if [[ $# -ne 1 ]]; then
         echo "Error: Requires exactly 1 argument, found $*" >&2
         return 1
     fi
@@ -241,7 +241,7 @@ function zhm_set_anchor() {
     fi
 
     local new_pos=$1
-    local movement_type=$3
+    local movement_type=$2
     zhm_set_cursor_and_anchor $CURSOR $new_pos $movement_type
 }
 
@@ -277,11 +277,6 @@ function zhm_insert_mode_impl() {
     bindkey -v
     zhm_save_state
 }
-
-# TODO: when entering and exiting insert mode:
-    # zhm_set_cursor_and_anchor $CURSOR $CURSOR
-    # zhm_save_state
-
 
 function zhm_normal_mode() {
     ZHM_MODE=$ZHM_MODE_NORMAL
@@ -324,7 +319,7 @@ function zhm_move_visual_line_up() {
 }
 
 function zhm_append_mode() {
-    # TODO: after exiting to normal mode, move cursor back one
+    # TODO: after exiting to normal mode, move cursor back one. Also don't lose highlight
     local pos=$(( $(zhm_max CURSOR ZHM_ANCHOR) + 1))
     zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
     zhm_insert_mode_impl
@@ -734,8 +729,6 @@ function zhm_initialise() {
         zhm_move_prev_long_word_start
         zhm_move_next_word_end
         zhm_move_next_long_word_end
-        zhm_move_prev_word_start
-        zhm_move_next_word_start
         zhm_delete_word_forward
         zhm_delete_word_backward
         zhm_delete_char_forward
@@ -751,7 +744,6 @@ function zhm_initialise() {
         zhm_collapse_selection
         zhm_flip_selections
         zhm_select_all
-        zhm_line_finish
         zhm_move_visual_line_down
         zhm_move_visual_line_up
     )
@@ -830,5 +822,4 @@ function zhm_initialise() {
 zhm_initialise
 
 # TODO:
-# - Why are keypresses slow now? E.g. when moving between modes
 # - ADD TESTS!
