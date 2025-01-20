@@ -203,9 +203,22 @@ function zhm_set_cursor_and_anchor() {
             zhm_safe_anchor_move $anchor
             ;;
         $ZHM_MOVEMENT_EXTEND)
-            if [[ "$ZHM_MODE" != "$ZHM_MODE_SELECT" ]]; then
-                zhm_safe_anchor_move $anchor
-            fi
+            case $ZHM_MODE in
+                $ZHM_MODE_NORMAL)
+                    zhm_safe_anchor_move $anchor
+                    ;;
+                $ZHM_MODE_INSERT)
+                    # TODO: don't do this if we can retain selection in insert mode
+                    zhm_safe_anchor_move $CURSOR
+                    ;;
+                $ZHM_MODE_SELECT)
+                    # No-op, extend selection
+                    ;;
+                *)
+                    echo "Invalid mode: $ZHM_MODE" >&2
+                    return 1
+                    ;;
+            esac
             ;;
         *)
             echo "Invalid movement type: $movement_type" >&2
@@ -213,7 +226,8 @@ function zhm_set_cursor_and_anchor() {
             ;;
     esac
 
-    if ((ZHM_ANCHOR >= 0)); then
+    # TODO: remove MODE != INSERT if we can retain selection in insert mode
+    if [[ "$ZHM_MODE" != "$ZHM_MODE_INSERT" ]] && (( ZHM_ANCHOR >= 0 )); then
         if ((CURSOR >= ZHM_ANCHOR)); then
             region_highlight=("${ZHM_ANCHOR} $((CURSOR + 1)) ${ZSH_HIGHLIGHT_STYLE}")
         else
