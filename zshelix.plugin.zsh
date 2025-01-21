@@ -293,8 +293,10 @@ function zhm_insert_mode_impl() {
 }
 
 function zhm_normal_mode() {
-    # TODO: we won't need this if we can keep highlight in insert mode
-    zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
+    if [[ "$ZHM_MODE" == "$ZHM_MODE_INSERT" ]]; then
+        # TODO: we won't need this if we can keep highlight in insert mode
+        zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
+    fi
     ZHM_MODE=$ZHM_MODE_NORMAL
     zhm_print_cursor
     bindkey -A helix-normal-mode main
@@ -431,15 +433,24 @@ function zhm_operate_on_selection() {
     if [[ $operation != "yank" ]]; then
         zhm_update_buffer 1 "${BUFFER:0:$start}${BUFFER:$end}"
         zhm_set_cursor_and_anchor $start $start $ZHM_MOVEMENT_MOVE
-
-        case $operation in
-            "cut")
-                zhm_insert_mode_impl
-                ;;
-            "delete")
-                ;;
-        esac
     fi
+
+    case $operation in
+        "cut")
+            zhm_insert_mode_impl
+            ;;
+        "delete")
+            zhm_normal_mode
+            ;;
+        "yank")
+            zhm_normal_mode
+            ;;
+        *)
+            echo "Invalid operation: $operation" >&2
+            return 1
+            ;;
+    esac
+
     return 0
 }
 
@@ -500,7 +511,9 @@ function zhm_paste_before() {
 }
 
 ### Word boundary navigation ###
-# TODO: this doesn't stop at newlines
+# TODO:
+# - doesn't stop at newlines
+# - back at first char of word keeps first char highlighted
 function zhm_find_word_boundary() {
     local motion=$1    # next_word | next_end | prev_word
     local word_type=$2 # word | WORD
