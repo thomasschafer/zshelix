@@ -513,7 +513,8 @@ function zhm_paste_before() {
 ### Word boundary navigation ###
 # TODO:
 # - doesn't stop at newlines
-# - back at first char of word keeps first char highlighted
+# - `b` at first char of word keeps first char highlighted
+# - `w` should consume all spaces after a word, only consumes first
 function zhm_find_word_boundary() {
     local motion=$1    # next_word | next_end | prev_word
     local word_type=$2 # word | WORD
