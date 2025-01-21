@@ -381,14 +381,6 @@ function zhm_delete_char_forward() {
     fi
 }
 
-function zhm_goto_line_start() {
-    zhm_set_cursor_and_anchor 0 0 $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_goto_line_end() {
-    zhm_set_cursor_and_anchor $#BUFFER $#BUFFER $ZHM_MOVEMENT_EXTEND
-}
-
 ### Word operations ###
 function zhm_delete_word_backward() {
     local pos=$CURSOR
@@ -674,6 +666,30 @@ function zhm_swap_cursor_anchor() {
     zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR $ZHM_MOVEMENT_MOVE
 }
 
+function zhm_goto_line_start() {
+    local line_start=$(zhm_find_line_start $CURSOR)
+    zhm_set_cursor_and_anchor $line_start $line_start $ZHM_MOVEMENT_EXTEND
+}
+
+function zhm_goto_line_end() {
+    local line_end=$(zhm_find_line_end $CURSOR)
+    zhm_set_cursor_and_anchor $line_end $line_end $ZHM_MOVEMENT_EXTEND
+}
+
+
+function zhm_goto_first_nonwhitespace() {
+    local first_char=$(zhm_find_line_first_non_blank $CURSOR)
+    zhm_set_cursor_and_anchor $first_char $first_char $ZHM_MOVEMENT_EXTEND
+}
+
+function zhm_goto_file_start() {
+    zhm_set_cursor_and_anchor 0 0 $ZHM_MOVEMENT_EXTEND
+}
+
+function zhm_goto_last_line() {
+    zhm_set_cursor_and_anchor $#BUFFER $#BUFFER $ZHM_MOVEMENT_EXTEND
+}
+
 ### Line extension commands ###
 function zhm_extend_line_below() {
     if ((CURSOR < ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
@@ -771,11 +787,14 @@ function zhm_initialise() {
         zhm_move_prev_long_word_start
         zhm_move_next_word_end
         zhm_move_next_long_word_end
+        zhm_goto_line_start
+        zhm_goto_line_end
+        zhm_goto_first_nonwhitespace
+        zhm_goto_file_start
+        zhm_goto_last_line
         zhm_delete_word_forward
         zhm_delete_word_backward
         zhm_delete_char_forward
-        zhm_goto_line_start
-        zhm_goto_line_end
         zhm_undo
         zhm_redo
         zhm_debug_logs
@@ -795,9 +814,13 @@ function zhm_initialise() {
 
     bindkey -N helix-normal-mode
     bindkey -M helix-normal-mode 'h' zhm_move_char_left
-    bindkey -M helix-normal-mode 'l' zhm_move_char_right
-    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up
     bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down
+    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up
+    bindkey -M helix-normal-mode 'l' zhm_move_char_right
+    bindkey -M helix-normal-mode '\e[D' zhm_move_char_left
+    bindkey -M helix-normal-mode '\e[B' zhm_move_visual_line_down
+    bindkey -M helix-normal-mode '\e[A' zhm_move_visual_line_up
+    bindkey -M helix-normal-mode '\e[C' zhm_move_char_right
     bindkey -M helix-normal-mode 'a' zhm_append_mode
     bindkey -M helix-normal-mode 'A' zhm_insert_at_line_end
     bindkey -M helix-normal-mode 'i' zhm_insert_mode
@@ -813,6 +836,11 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'B' zhm_move_prev_long_word_start
     bindkey -M helix-normal-mode 'e' zhm_move_next_word_end
     bindkey -M helix-normal-mode 'E' zhm_move_next_long_word_end
+    bindkey -M helix-normal-mode 'gh' zhm_goto_line_start
+    bindkey -M helix-normal-mode 'gl' zhm_goto_line_end
+    bindkey -M helix-normal-mode 'gs' zhm_goto_first_nonwhitespace
+    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start
+    bindkey -M helix-normal-mode 'ge' zhm_goto_last_line
     bindkey -M helix-normal-mode 'u' zhm_undo
     bindkey -M helix-normal-mode 'U' zhm_redo
     bindkey -M helix-normal-mode 'D' zhm_debug_logs
@@ -838,8 +866,6 @@ function zhm_initialise() {
     bindkey -M viins '\ef' zhm_move_next_word_start
     bindkey -M viins '\ed' zhm_delete_word_forward
     bindkey -M viins '\e[3~' zhm_delete_char_forward
-    bindkey -M viins '\C-a' zhm_goto_line_start
-    bindkey -M viins '\C-e' zhm_goto_line_end
     bindkey -M viins '\e\177' zhm_delete_word_backward
     bindkey -M viins '\e^?' zhm_delete_word_backward
     bindkey -M viins '\e[3;3~' zhm_delete_word_forward
