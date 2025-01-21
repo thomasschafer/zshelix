@@ -166,9 +166,9 @@ function zhm_clear_history() {
     zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
 }
 
-function zhm_line_finish() {
+function zhm_accept_and_clear() {
     zhm_clear_history
-    return 0
+    zle accept-line
 }
 
 ### Selection and highlighting ###
@@ -761,10 +761,6 @@ function zhm_print_cursor() {
     print -n $cursor
 }
 
-function zhm_precmd() {
-    zhm_print_cursor
-}
-
 function zhm_initialise() {
     local -a widgets=(
         zhm_normal_mode
@@ -798,8 +794,6 @@ function zhm_initialise() {
         zhm_undo
         zhm_redo
         zhm_debug_logs
-        zhm_clear_history
-        zhm_line_finish
         zhm_extend_line_below
         zhm_extend_to_line_bounds
         zhm_collapse_selection
@@ -807,6 +801,7 @@ function zhm_initialise() {
         zhm_select_all
         zhm_move_visual_line_down
         zhm_move_visual_line_up
+        zhm_accept_and_clear
     )
     for widget in $widgets; do
         zle -N $widget
@@ -852,6 +847,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode '%' zhm_select_all
     bindkey -M helix-normal-mode 'v' zhm_select_mode_flip
     bindkey -M helix-normal-mode '\e' zhm_normal_mode
+    bindkey -M helix-normal-mode '^M' zhm_accept_and_clear
 
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
@@ -870,6 +866,7 @@ function zhm_initialise() {
     bindkey -M viins '\e^?' zhm_delete_word_backward
     bindkey -M viins '\e[3;3~' zhm_delete_word_forward
     bindkey -M viins '\e\e[3~' zhm_delete_word_forward
+    bindkey -M viins '^M' zhm_accept_and_clear
     # Bind history search in insert mode
     bindkey -M viins '^R' history-incremental-search-backward
     bindkey -M viins '^S' history-incremental-search-forward
