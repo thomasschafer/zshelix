@@ -710,7 +710,7 @@ function zhm_extend_line_below() {
         fi
     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_MOVE
 }
 
 function zhm_extend_to_line_bounds() {
@@ -732,7 +732,7 @@ function zhm_extend_to_line_bounds() {
         fi
     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_MOVE
 }
 
 function zhm_select_all() {
@@ -891,3 +891,5 @@ zhm_initialise
 
 # TODO:
 # - ADD TESTS!
+# - Add replace command
+# - Integrate with system clipboard and add options for delete without yanking
