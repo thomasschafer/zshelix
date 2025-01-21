@@ -849,6 +849,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'v' zhm_select_mode_flip
     bindkey -M helix-normal-mode '\e' zhm_normal_mode
     bindkey -M helix-normal-mode '^M' zhm_accept_and_clear
+    bindkey -M helix-normal-mode '^L' clear-screen
 
     # Bind normal mode history search
     bindkey -M helix-normal-mode '^R' history-incremental-search-backward
@@ -877,6 +878,9 @@ function zhm_initialise() {
     bindkey -M viins '\eF' zhm_move_next_word_start
     bindkey -M viins '\e[1~' zhm_goto_line_start
     bindkey -M viins '\e[4~' zhm_goto_line_end
+    bindkey -M viins '\e[D' backward-char
+    bindkey -M viins '\e[C' forward-char
+    bindkey -M viins '^?' backward-delete-char
 
     # Set short timeout for escape key
     KEYTIMEOUT=1
@@ -893,6 +897,5 @@ zhm_initialise
 
 # TODO:
 # - ADD TESTS!
-# - backspace in insert mode on multiline at start of line doesn't work
 # - Add replace command
 # - Integrate with system clipboard and add options for delete without yanking
