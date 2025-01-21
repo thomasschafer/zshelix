@@ -503,6 +503,48 @@ function zhm_paste_before() {
     zhm_paste 1
 }
 
+function zhm_replace() {
+    local bounds=($(zhm_get_selection_bounds))
+    if ((${#bounds} != 2)); then
+        return 1
+    fi
+    local start=$bounds[1]
+    local end=$bounds[2]
+    local len=$((end - start))
+
+    read -k 1 char
+    if [[ $? != 0 ]] || [[ $char == $'\e' ]]; then
+        zhm_normal_mode
+        return 0
+    fi
+
+    # Create string of repeated characters
+    local replacement=""
+    for ((i = 0; i < len; i++)); do
+        replacement+="$char"
+    done
+
+    zhm_update_buffer 1 "${BUFFER:0:$start}${replacement}${BUFFER:$end}"
+    zhm_normal_mode
+}
+
+function zhm_replace_with_yanked() {
+    local bounds=($(zhm_get_selection_bounds))
+    if ((${#bounds} != 2)) || [[ -z "$ZHM_CUT_BUFFER" ]]; then
+        return 1
+    fi
+    local start=$bounds[1]
+    local end=$bounds[2]
+
+    zhm_update_buffer 1 "${BUFFER:0:$start}${ZHM_CUT_BUFFER}${BUFFER:$end}"
+
+    # Select pasted contents
+    local new_cursor=$((start + ${#ZHM_CUT_BUFFER} - 1))
+    zhm_set_cursor_and_anchor $new_cursor $start $ZHM_MOVEMENT_MOVE
+
+    zhm_normal_mode
+}
+
 ### Word boundary navigation ###
 # TODO:
 # - doesn't stop at newlines
@@ -778,6 +820,8 @@ function zhm_initialise() {
         zhm_delete_selection
         zhm_paste_after
         zhm_paste_before
+        zhm_replace
+        zhm_replace_with_yanked
         zhm_move_next_word_start
         zhm_move_next_long_word_start
         zhm_move_prev_word_start
@@ -826,6 +870,8 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'd' zhm_delete_selection
     bindkey -M helix-normal-mode 'p' zhm_paste_after
     bindkey -M helix-normal-mode 'P' zhm_paste_before
+    bindkey -M helix-normal-mode 'r' zhm_replace
+    bindkey -M helix-normal-mode 'R' zhm_replace_with_yanked
     bindkey -M helix-normal-mode 'w' zhm_move_next_word_start
     bindkey -M helix-normal-mode 'W' zhm_move_next_long_word_start
     bindkey -M helix-normal-mode 'b' zhm_move_prev_word_start
