@@ -382,6 +382,7 @@ function zhm_delete_char_forward() {
 }
 
 ### Word operations ###
+# TODO: these should stop at punctuation etc. matching e.g. zhm_move_prev_word_start. Maybe just replace with built-in C-w?
 function zhm_delete_word_backward() {
     local pos=$CURSOR
     # Skip any spaces immediately before cursor
@@ -872,6 +873,10 @@ function zhm_initialise() {
     bindkey -M viins '^S' history-incremental-search-forward
     bindkey -M viins '^P' up-line-or-history
     bindkey -M viins '^N' down-line-or-history
+    bindkey -M viins '\eB' zhm_move_prev_word_start
+    bindkey -M viins '\eF' zhm_move_next_word_start
+    bindkey -M viins '\e[1~' zhm_goto_line_start
+    bindkey -M viins '\e[4~' zhm_goto_line_end
 
     # Set short timeout for escape key
     KEYTIMEOUT=1
@@ -888,5 +893,6 @@ zhm_initialise
 
 # TODO:
 # - ADD TESTS!
+# - backspace in insert mode on multiline at start of line doesn't work
 # - Add replace command
 # - Integrate with system clipboard and add options for delete without yanking
