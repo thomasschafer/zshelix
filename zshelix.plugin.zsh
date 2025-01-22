@@ -168,6 +168,7 @@ function zhm_clear_history() {
 
 function zhm_accept_and_clear() {
     zhm_clear_history
+    zhm_remove_highlight
     zle accept-line
 }
 
@@ -943,5 +944,4 @@ zhm_initialise
 
 # TODO:
 # - ADD TESTS!
-# - Add replace command
 # - Integrate with system clipboard and add options for delete without yanking
