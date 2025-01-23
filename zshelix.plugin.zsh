@@ -549,8 +549,10 @@ function zhm_replace_with_yanked() {
 ### Word boundary navigation ###
 # TODO:
 # - doesn't stop at newlines
-# - `b` at first char of word keeps first char highlighted
 # - `w` should consume all spaces after a word, only consumes first
+# - `b` at first char of word keeps first char highlighted
+# - `w`/`b` should treat sequences of punctuation as words, and separately chars with _
+# TODO: delete and refactor zhm_move_next_word_start to include all behaviour
 function zhm_find_word_boundary() {
     local motion=$1    # next_word | next_end | prev_word
     local word_type=$2 # word | WORD
@@ -660,8 +662,80 @@ function zhm_find_word_boundary() {
     zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
+# this-aaa-_?.----bbb is      a test
+# TODO: doesn't work when next word is one char
 function zhm_move_next_word_start() {
-    zhm_find_word_boundary "next_word" "word"
+    function is_word_char() {
+        local char="${BUFFER:$1:1}"
+        [[ $char =~ [a-zA-Z_] ]]
+    }
+    function is_whitespace() {
+        local char="${BUFFER:$1:1}"
+        [[ $char =~ [[:space:]] ]]
+    }
+    function is_symbol() {
+        local char="${BUFFER:$1:1}"
+        ! is_word_char "$1" && ! is_whitespace "$1"
+    }
+    function char_type() {
+        local pos=$1
+        if is_word_char $pos; then
+            echo 1
+        elif is_symbol $pos; then
+            echo 2
+        else
+            echo 3
+        fi
+    }
+
+    local len=$#BUFFER
+    local prev_cursor=$CURSOR
+    local prev_anchor=$ZHM_ANCHOR
+    local pos=$CURSOR
+
+    local matcher=
+    local non_matcher=
+
+    if ((pos < len)); then
+        # Shift forward if at end of word, unless next char is whitespace
+        if [[ $(char_type $pos) -ne $(char_type $((pos+1))) ]] && ! $(is_whitespace $((pos+1))); then
+            ((pos++))
+        fi
+
+        if is_word_char $pos; then
+            matcher="is_word_char"
+            non_matcher="is_symbol"
+        elif is_symbol $pos; then
+            matcher="is_symbol"
+            non_matcher="is_word_char"
+        fi
+    fi
+
+    local new_anchor=$pos
+
+    # Consume word characters or symbols
+    if [ -n "$matcher" ]; then
+        while ((pos < len)); do
+            if $matcher $pos && ! $non_matcher $((pos+1)); then
+                ((pos++))
+            else
+                break
+            fi
+        done
+    fi
+
+    # Consume whitespace
+    while ((pos + 1 < len)); do
+        if is_whitespace $((pos + 1)); then
+            ((pos++))
+        else
+            break
+        fi
+    done
+
+    local new_cursor=$pos
+
+    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
 function zhm_move_next_long_word_start() {
