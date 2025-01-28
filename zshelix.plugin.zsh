@@ -549,6 +549,9 @@ function zhm_replace_with_yanked() {
 ### Word boundary navigation ###
 
 # this-aaa-_?.----bbb is      a test
+# TODO: fix `foo - bar` backwards
+# TODO: fix w on first letter
+# TODO: fix b on last letter
 function zhm_move_word_impl() {
     function is_word_char() {
         local char="${BUFFER:$1:1}"
@@ -598,8 +601,6 @@ function zhm_move_word_impl() {
             ;;
     esac
 
-    local len=$#BUFFER
-
     function within_bounds() {
         local num=$1
         if [[ ! $num =~ ^-?[0-9]+$ ]]; then
@@ -608,6 +609,8 @@ function zhm_move_word_impl() {
         fi
         (( num >= 0 && num <= len - 1 ))
     }
+
+    local len=$#BUFFER
 
     local prev_cursor=$CURSOR
     local prev_anchor=$ZHM_ANCHOR
@@ -630,18 +633,20 @@ function zhm_move_word_impl() {
             ;;
     esac
 
-    if ! {
+    # TODO: this is hacky, do we need it??
+    local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
+    if (( prev_step != (-step) )) &&
         $initial_matcher $pos &&
         { ! within_bounds $((pos + step)) || $initial_non_matcher $((pos + step)) } &&
-        { ! within_bounds $((pos - step)) || $initial_non_matcher $((pos - step)) }
-    }; then
+        ! { ! within_bounds $((pos - step)) || $initial_non_matcher $((pos - step)) }
+    ; then
         ((pos += step))
     fi
     local new_anchor=$pos
 
     function consume_word_chars() {
         if within_bounds $((pos + step)) && is_whitespace $pos; then
-            # TODO: remove?
+            # TODO: this is hacky, remove
             ((pos += step))
         fi
         local word_matcher=
@@ -676,8 +681,16 @@ function zhm_move_word_impl() {
 
     case $position in
         "start")
-            consume_word_chars
-            consume_whitespace
+            case $direction in
+                "next")
+                    consume_word_chars
+                    consume_whitespace
+                    ;;
+                "prev")
+                    consume_whitespace
+                    consume_word_chars
+                    ;;
+            esac
             ;;
         "end")
             consume_whitespace
@@ -702,13 +715,13 @@ function zhm_move_next_long_word_start() {
     zhm_move_word_impl "next" "start" "long_word"
 }
 
-# function zhm_move_prev_word_start() {
-#     zhm_find_word_boundary "prev_word" "word"
-# }
+function zhm_move_prev_word_start() {
+    zhm_move_word_impl "prev" "start" "word"
+}
 
-# function zhm_move_prev_long_word_start() {
-#     zhm_find_word_boundary "prev_word" "WORD"
-# }
+function zhm_move_prev_long_word_start() {
+    zhm_move_word_impl "prev" "start" "long_word"
+}
 
 function zhm_move_next_word_end() {
     zhm_move_word_impl "next" "end" "word"
