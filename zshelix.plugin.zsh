@@ -61,12 +61,12 @@ ZHM_EMPTY_BUFFER="<ZHM_EMPTY_BUFFER>"
 
 function zhm_history_append() {
     if [[ $# -ne 3 ]]; then
-        echo "Error: Requires exactly 3 arguments, found $*" >&2
+        echo "Error (zhm_history_append): Requires exactly 3 arguments, found $*" >&2
         return 1
     fi
 
     if [[ ! $1 =~ ^-?[0-9]+$ ]] || [[ ! $2 =~ ^-?[0-9]+$ ]]; then
-        echo "Error: First two arguments must be integers" >&2
+        echo "Error (zhm_history_append): First two arguments must be integers" >&2
         return 1
     fi
 
@@ -88,7 +88,7 @@ function zhm_history_append() {
 function zhm_history_get_state() {
     local start=$((ZHM_UNDO_INDEX * 3 + 1))
     if [[ $start -ge ${#ZHM_UNDO_STATES[@]} ]]; then
-        echo "Error: Index $start out of range" >&2
+        echo "Error (zhm_history_get_state): Index $start out of range" >&2
         return 1
     fi
 
@@ -189,7 +189,7 @@ function zhm_set_cursor_and_anchor() {
     }
 
     if [[ $# -ne 3 ]]; then
-        echo "Error: Requires exactly 3 arguments, found $*" >&2
+        echo "Error (zhm_set_cursor_and_anchor): Requires exactly 3 arguments, found $*" >&2
         return 1
     fi
 
@@ -241,7 +241,7 @@ function zhm_set_cursor_and_anchor() {
 
 function zhm_set_cursor() {
     if [[ $# -ne 1 ]]; then
-        echo "Error: Requires exactly 1 argument, found $*" >&2
+        echo "Error (zhm_set_cursor): Requires exactly 1 argument, found $*" >&2
         return 1
     fi
 
@@ -251,7 +251,7 @@ function zhm_set_cursor() {
 
 function zhm_set_anchor() {
     if [[ $# -ne 2 ]]; then
-        echo "Error: Requires exactly 2 arguments, found $*" >&2
+        echo "Error (zhm_set_anchor): Requires exactly 2 arguments, found $*" >&2
         return 1
     fi
 
@@ -576,7 +576,7 @@ function zhm_move_word_impl() {
     }
 
     if [[ $# -ne 3 ]]; then
-        echo "Error: Requires exactly 3 arguments, found '$*'" >&2
+        echo "Error (zhm_move_word_impl): Requires exactly 3 arguments, found '$*'" >&2
         return 1
     fi
 
@@ -593,7 +593,7 @@ function zhm_move_word_impl() {
             step=-1
             ;;
         *)
-            echo "Error: Invalid direction '$direction'" >&2
+            echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
             return 1
             ;;
     esac
@@ -603,7 +603,7 @@ function zhm_move_word_impl() {
     function within_bounds() {
         local num=$1
         if [[ ! $num =~ ^-?[0-9]+$ ]]; then
-            echo "Error: argument must be a number" >&2
+            echo "Error (zhm_move_word_impl): argument must be a number" >&2
             return 1
         fi
         ((num >= 0 && num <= $((len-1))))
@@ -649,7 +649,7 @@ function zhm_move_word_impl() {
                 word_matcher="is_not_whitespace"
                 ;;
             *)
-                echo "Error: Invalid word_type '$word_type'" >&2
+                echo "Error (zhm_move_word_impl): Invalid word_type '$word_type'" >&2
                 return 1
                 ;;
         esac
@@ -666,7 +666,7 @@ function zhm_move_word_impl() {
             matcher_2=$word_matcher
             ;;
         *)
-            echo "Error: Invalid position '$position'" >&2
+            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
             return 1
             ;;
     esac
@@ -824,7 +824,7 @@ function zhm_print_cursor() {
             cursor=$ZHM_CURSOR_SELECT
             ;;
         *)
-            echo "Error: Invalid mode '$ZHM_MODE'" >&2
+            echo "Error (zhm_print_cursor): Invalid mode '$ZHM_MODE'" >&2
             return 1
             ;;
     esac
