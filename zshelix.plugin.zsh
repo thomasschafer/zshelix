@@ -547,124 +547,123 @@ function zhm_replace_with_yanked() {
 }
 
 ### Word boundary navigation ###
-# TODO:
-# - doesn't stop at newlines
-# - `w` should consume all spaces after a word, only consumes first
-# - `b` at first char of word keeps first char highlighted
-# - `w`/`b` should treat sequences of punctuation as words, and separately chars with _
-# TODO: delete and refactor zhm_move_next_word_start to include all behaviour
-function zhm_find_word_boundary() {
-    local motion=$1    # next_word | next_end | prev_word
-    local word_type=$2 # word | WORD
-    local len=$#BUFFER
+# # TODO:
+# # - doesn't stop at newlines
+# # - `w` should consume all spaces after a word, only consumes first
+# # - `b` at first char of word keeps first char highlighted
+# # - `w`/`b` should treat sequences of punctuation as words, and separately chars with _
+# # TODO: delete and refactor zhm_move_next_word_start to include all behaviour
+# function zhm_find_word_boundary() {
+#     local motion=$1    # next_word | next_end | prev_word
+#     local word_type=$2 # word | WORD
+#     local len=$#BUFFER
 
-    local pattern is_match
-    if [[ $word_type == "WORD" ]]; then
-        pattern="[[:space:]]"
-        is_match="! [[ \$char =~ \$pattern ]]"  # Match non-space
-    elif [[ $word_type == "word" ]]; then
-        pattern="[[:alnum:]_]"
-        is_match="[[ \$char =~ \$pattern ]]"    # Match word chars
-    else
-        echo "Invalid word_type: $word_type" >&2
-        return 1
-    fi
+#     local pattern is_match
+#     if [[ $word_type == "WORD" ]]; then
+#         pattern="[[:space:]]"
+#         is_match="! [[ \$char =~ \$pattern ]]"  # Match non-space
+#     elif [[ $word_type == "word" ]]; then
+#         pattern="[[:alnum:]_]"
+#         is_match="[[ \$char =~ \$pattern ]]"    # Match word chars
+#     else
+#         echo "Invalid word_type: $word_type" >&2
+#         return 1
+#     fi
 
-    local prev_cursor=$CURSOR
-    local prev_anchor=$ZHM_ANCHOR
-    local pos=$CURSOR
+#     local prev_cursor=$CURSOR
+#     local prev_anchor=$ZHM_ANCHOR
+#     local pos=$CURSOR
 
-    case $motion in
-        "next_word")
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if ! eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
+#     case $motion in
+#         "next_word")
+#             while ((pos < len)); do
+#                 local char="${BUFFER:$pos:1}"
+#                 if ! eval $is_match; then
+#                     ((pos++))
+#                 else
+#                     break
+#                 fi
+#             done
 
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
-            ;;
+#             while ((pos < len)); do
+#                 local char="${BUFFER:$pos:1}"
+#                 if eval $is_match; then
+#                     ((pos++))
+#                 else
+#                     break
+#                 fi
+#             done
+#             ;;
 
-        "next_end")
-            if ((pos < len)); then
-                ((pos++))
-            fi
+#         "next_end")
+#             if ((pos < len)); then
+#                 ((pos++))
+#             fi
 
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if ! eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
+#             while ((pos < len)); do
+#                 local char="${BUFFER:$pos:1}"
+#                 if ! eval $is_match; then
+#                     ((pos++))
+#                 else
+#                     break
+#                 fi
+#             done
 
-            while ((pos < len)); do
-                local char="${BUFFER:$pos:1}"
-                if eval $is_match; then
-                    ((pos++))
-                else
-                    break
-                fi
-            done
+#             while ((pos < len)); do
+#                 local char="${BUFFER:$pos:1}"
+#                 if eval $is_match; then
+#                     ((pos++))
+#                 else
+#                     break
+#                 fi
+#             done
 
-            # Move back one to land on last char
-            ((pos--))
-            ;;
+#             # Move back one to land on last char
+#             ((pos--))
+#             ;;
 
-        "prev_word")
-            while ((pos > 0)); do
-                local char="${BUFFER:$((pos-1)):1}"
-                if ! eval $is_match; then
-                    ((pos--))
-                else
-                    break
-                fi
-            done
+#         "prev_word")
+#             while ((pos > 0)); do
+#                 local char="${BUFFER:$((pos-1)):1}"
+#                 if ! eval $is_match; then
+#                     ((pos--))
+#                 else
+#                     break
+#                 fi
+#             done
 
-            while ((pos > 0)); do
-                local char="${BUFFER:$((pos-1)):1}"
-                if eval $is_match; then
-                    ((pos--))
-                else
-                    break
-                fi
-            done
-            ;;
+#             while ((pos > 0)); do
+#                 local char="${BUFFER:$((pos-1)):1}"
+#                 if eval $is_match; then
+#                     ((pos--))
+#                 else
+#                     break
+#                 fi
+#             done
+#             ;;
 
-        *)
-            echo "Invalid motion: $motion" >&2
-            return 1
-            ;;
-    esac
+#         *)
+#             echo "Invalid motion: $motion" >&2
+#             return 1
+#             ;;
+#     esac
 
-    local new_cursor=$pos
+#     local new_cursor=$pos
 
-    # If continuing in the same direction, move the anchor in the dir by 1 step
-    local prev_dir=$(zhm_sign $((prev_cursor - prev_anchor)))
-    local new_dir=$(zhm_sign $((new_cursor - prev_cursor)))
-    if [[ $new_dir == $prev_dir ]]; then
-        new_anchor=$((prev_cursor+new_dir))
-    else
-        new_anchor=$prev_cursor
-    fi
+#     # If continuing in the same step, move the anchor in the dir by 1 step
+#     local prev_dir=$(zhm_sign $((prev_cursor - prev_anchor)))
+#     local new_dir=$(zhm_sign $((new_cursor - prev_cursor)))
+#     if [[ $new_dir == $prev_dir ]]; then
+#         new_anchor=$((prev_cursor+new_dir))
+#     else
+#         new_anchor=$prev_cursor
+#     fi
 
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
-}
+#     zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
+# }
 
 # this-aaa-_?.----bbb is      a test
-# TODO: doesn't work when next word is one char
-function zhm_move_next_word_start() {
+function zhm_move_word_impl() {
     function is_word_char() {
         local char="${BUFFER:$1:1}"
         [[ $char =~ [a-zA-Z_] ]]
@@ -673,8 +672,10 @@ function zhm_move_next_word_start() {
         local char="${BUFFER:$1:1}"
         [[ $char =~ [[:space:]] ]]
     }
+    function is_not_whitespace() {
+        ! is_whitespace "$1"
+    }
     function is_symbol() {
-        local char="${BUFFER:$1:1}"
         ! is_word_char "$1" && ! is_whitespace "$1"
     }
     function char_type() {
@@ -688,74 +689,140 @@ function zhm_move_next_word_start() {
         fi
     }
 
+    if [[ $# -ne 3 ]]; then
+        echo "Error: Requires exactly 3 arguments, found '$*'" >&2
+        return 1
+    fi
+
+    local direction=$1  # next | prev
+    local position=$2   # start | end
+    local word_type=$3  # word | long_word
+
+    local step=
+    case $direction in
+        "next")
+            step=1
+            ;;
+        "prev")
+            step=-1
+            ;;
+        *)
+            echo "Error: Invalid direction '$direction'" >&2
+            return 1
+            ;;
+    esac
+
     local len=$#BUFFER
+
+    function within_bounds() {
+        local num=$1
+        if [[ ! $num =~ ^-?[0-9]+$ ]]; then
+            echo "Error: argument must be a number" >&2
+            return 1
+        fi
+        ((num >= 0 && num <= $((len-1))))
+    }
+
     local prev_cursor=$CURSOR
     local prev_anchor=$ZHM_ANCHOR
     local pos=$CURSOR
 
-    local matcher=
     local non_matcher=
-
-    if ((pos < len)); then
-        # Shift forward if at end of word, unless next char is whitespace
-        if [[ $(char_type $pos) -ne $(char_type $((pos+1))) ]] && ! $(is_whitespace $((pos+1))); then
-            ((pos++))
-        fi
-
-        if is_word_char $pos; then
-            matcher="is_word_char"
-            non_matcher="is_symbol"
-        elif is_symbol $pos; then
-            matcher="is_symbol"
-            non_matcher="is_word_char"
-        fi
+    # TODO: combine this with the other $position case statement?
+    case $position in
+        "start")
+            non_matcher=is_whitespace
+            ;;
+        "end")
+            non_matcher=is_not_whitespace
+            ;;
+        *)
+            echo "Error: Invalid position '$position'" >&2
+            return 1
+            ;;
+    esac
+    if ! within_bounds $((pos + step)) ||
+       [[ $(char_type $pos) != $(char_type $((pos + step))) &&
+          ! $($non_matcher $((pos + step))) ]]; then
+        ((pos += step))
     fi
-
     local new_anchor=$pos
 
-    # Consume word characters or symbols
-    if [ -n "$matcher" ]; then
-        while ((pos < len)); do
-            if $matcher $pos && ! $non_matcher $((pos+1)); then
-                ((pos++))
-            else
-                break
-            fi
+    # TODO: can we combine the matcher blocks?
+    local word_matcher="is_not_whitespace"
+    if within_bounds $((pos + step)); then
+        case $word_type in
+            "word")
+                if is_word_char $pos; then
+                    word_matcher="is_word_char"
+                elif is_symbol $pos; then
+                    word_matcher="is_symbol"
+                fi
+                ;;
+            "long_word")
+                word_matcher="is_not_whitespace"
+                ;;
+            *)
+                echo "Error: Invalid word_type '$word_type'" >&2
+                return 1
+                ;;
+        esac
+    fi
+    local matcher_1=
+    local matcher_2=
+    case $position in
+        "start")
+            matcher_1=$word_matcher
+            matcher_2=is_whitespace
+            ;;
+        "end")
+            matcher_1=is_whitespace
+            matcher_2=$word_matcher
+            ;;
+        *)
+            echo "Error: Invalid position '$position'" >&2
+            return 1
+            ;;
+    esac
+
+    # TODO: tidy
+    if [ -n "$matcher_1" ]; then
+        while within_bounds $((pos + step)) && $matcher_1 $((pos + step)); do
+            ((pos += step))
         done
     fi
-
-    # Consume whitespace
-    while ((pos + 1 < len)); do
-        if is_whitespace $((pos + 1)); then
-            ((pos++))
-        else
-            break
-        fi
-    done
-
+    if [ -n "$matcher_2" ]; then
+        while within_bounds $((pos + step)) && $matcher_2 $((pos + step)); do
+            ((pos += step))
+        done
+    fi
     local new_cursor=$pos
 
     zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
 }
 
+function zhm_move_next_word_start() {
+    zhm_move_word_impl "next" "start" "word"
+}
+
 function zhm_move_next_long_word_start() {
-    zhm_find_word_boundary "next_word" "WORD"
+    zhm_move_word_impl "next" "start" "long_word"
 }
 
-function zhm_move_prev_word_start() {
-    zhm_find_word_boundary "prev_word" "word"
-}
+# function zhm_move_prev_word_start() {
+#     zhm_find_word_boundary "prev_word" "word"
+# }
 
-function zhm_move_prev_long_word_start() {
-    zhm_find_word_boundary "prev_word" "WORD"
-}
+# function zhm_move_prev_long_word_start() {
+#     zhm_find_word_boundary "prev_word" "WORD"
+# }
 
 function zhm_move_next_word_end() {
-    zhm_find_word_boundary "next_end" "word"
+    zhm_move_word_impl "next" "end" "word"
 }
 
 function zhm_move_next_long_word_end() {
-    zhm_find_word_boundary "next_end" "WORD"
+    zhm_move_word_impl "next" "end" "long_word"
 }
 
 ### Line movement helpers ###
