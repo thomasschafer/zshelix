@@ -639,9 +639,12 @@ function zhm_move_word_impl() {
     fi
     local new_anchor=$pos
 
-    # TODO: can we combine the matcher blocks?
-    local word_matcher="is_not_whitespace"
-    if within_bounds $((pos + step)); then
+    function consume_word_chars() {
+        if within_bounds $((pos + step)) && is_whitespace $pos; then
+            # TODO: remove?
+            ((pos += step))
+        fi
+        local word_matcher=
         case $word_type in
             "word")
                 if is_word_char $pos; then
@@ -658,17 +661,27 @@ function zhm_move_word_impl() {
                 return 1
                 ;;
         esac
-    fi
-    local matcher_1=
-    local matcher_2=
+
+        if [ -n "$word_matcher" ]; then
+            while within_bounds $((pos + step)) && $word_matcher $((pos + step)); do
+                ((pos += step))
+            done
+        fi
+    }
+    function consume_whitespace() {
+        while within_bounds $((pos + step)) && is_whitespace $((pos + step)); do
+            ((pos += step))
+        done
+    }
+
     case $position in
         "start")
-            matcher_1=$word_matcher
-            matcher_2=is_whitespace
+            consume_word_chars
+            consume_whitespace
             ;;
         "end")
-            matcher_1=is_whitespace
-            matcher_2=$word_matcher
+            consume_whitespace
+            consume_word_chars
             ;;
         *)
             echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
@@ -676,17 +689,6 @@ function zhm_move_word_impl() {
             ;;
     esac
 
-    # TODO: tidy
-    if [ -n "$matcher_1" ]; then
-        while within_bounds $((pos + step)) && $matcher_1 $((pos + step)); do
-            ((pos += step))
-        done
-    fi
-    if [ -n "$matcher_2" ]; then
-        while within_bounds $((pos + step)) && $matcher_2 $((pos + step)); do
-            ((pos += step))
-        done
-    fi
     local new_cursor=$pos
 
     zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
