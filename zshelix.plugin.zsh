@@ -606,30 +606,35 @@ function zhm_move_word_impl() {
             echo "Error (zhm_move_word_impl): argument must be a number" >&2
             return 1
         fi
-        ((num >= 0 && num <= $((len-1))))
+        (( num >= 0 && num <= len - 1 ))
     }
 
     local prev_cursor=$CURSOR
     local prev_anchor=$ZHM_ANCHOR
     local pos=$CURSOR
 
-    local non_matcher=
+    local initial_matcher= initial_non_matcher=
     # TODO: combine this with the other $position case statement?
     case $position in
         "start")
-            non_matcher=is_whitespace
+            initial_matcher=is_not_whitespace
+            initial_non_matcher=is_whitespace
             ;;
         "end")
-            non_matcher=is_not_whitespace
+            initial_matcher=is_whitespace
+            initial_non_matcher=is_not_whitespace
             ;;
         *)
             echo "Error: Invalid position '$position'" >&2
             return 1
             ;;
     esac
-    if ! within_bounds $((pos + step)) ||
-       [[ $(char_type $pos) != $(char_type $((pos + step))) &&
-          ! $($non_matcher $((pos + step))) ]]; then
+
+    if ! {
+        $initial_matcher $pos &&
+        { ! within_bounds $((pos + step)) || $initial_non_matcher $((pos + step)) } &&
+        { ! within_bounds $((pos - step)) || $initial_non_matcher $((pos - step)) }
+    }; then
         ((pos += step))
     fi
     local new_anchor=$pos
