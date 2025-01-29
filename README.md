@@ -38,7 +38,7 @@ TODO
 | `p` | Paste after selection | paste_after |
 | `P` | Paste before selection | paste_before |
 | `x` | Select current line, if already selected, extend to next line | extend_line_below |
-| `X` | Extend selection to line bounds (line-wise selection) | extend_to_line_bounds |
+| `X` | Select current line, if already selected, extend to previous line | extend_line_above |
 | `;` | Collapse selection onto a single cursor | collapse_selection |
 | `Alt-;` | Flip selection cursor and anchor | flip_selections |
 | `%` | Select entire file | select_all |
@@ -47,7 +47,7 @@ TODO
 | `gh` | Go to the start of the line | goto_line_start |
 | `gl` | Go to the end of the line | goto_line_end |
 | `gs` | Go to first non-whitespace character of the line | goto_first_nonwhitespace |
-| `gg` | Go to line number <n> else start of file | goto_file_start |
+| `gg` | Go start of file | goto_file_start |
 | `ge` | Go to the end of the file | goto_last_line |
 | `Enter` | Run the command in the buffer | accept_line |
 | `Ctrl-l` | clear the current buffer | clear-screen |

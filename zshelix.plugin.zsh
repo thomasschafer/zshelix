@@ -765,7 +765,7 @@ function zhm_extend_line_below() {
     zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_MOVE
 }
 
-function zhm_extend_to_line_bounds() {
+function zhm_extend_line_above() {
     if ((CURSOR > ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
         zhm_swap_cursor_anchor
     fi
@@ -846,7 +846,7 @@ function zhm_initialise() {
         zhm_redo
         zhm_debug_logs
         zhm_extend_line_below
-        zhm_extend_to_line_bounds
+        zhm_extend_line_above
         zhm_collapse_selection
         zhm_flip_selections
         zhm_select_all
@@ -892,7 +892,7 @@ function zhm_initialise() {
     # Selection manipulation
     bindkey -M helix-normal-mode 'x' zhm_extend_line_below  # DESC: Select current line, if already selected, extend to next line
     # TODO: the below should default to `extend_to_line_bounds` - override with config
-    bindkey -M helix-normal-mode 'X' zhm_extend_to_line_bounds  # DESC: Extend selection to line bounds (line-wise selection)
+    bindkey -M helix-normal-mode 'X' zhm_extend_line_above  # DESC: Select current line, if already selected, extend to previous line
     bindkey -M helix-normal-mode ';' zhm_collapse_selection  # DESC: Collapse selection onto a single cursor
     bindkey -M helix-normal-mode '\e;' zhm_flip_selections  # DESC: Flip selection cursor and anchor
     bindkey -M helix-normal-mode '%' zhm_select_all  # DESC: Select entire file
@@ -902,7 +902,7 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode 'gh' zhm_goto_line_start  # DESC: Go to the start of the line
     bindkey -M helix-normal-mode 'gl' zhm_goto_line_end  # DESC: Go to the end of the line
     bindkey -M helix-normal-mode 'gs' zhm_goto_first_nonwhitespace  # DESC: Go to first non-whitespace character of the line
-    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start  # DESC: Go to line number <n> else start of file
+    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start  # DESC: Go start of file
     bindkey -M helix-normal-mode 'ge' zhm_goto_last_line  # DESC: Go to the end of the file
     # Debug
     bindkey -M helix-normal-mode 'D' zhm_debug_logs  # HIDDEN
