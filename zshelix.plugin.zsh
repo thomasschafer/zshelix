@@ -547,15 +547,12 @@ function zhm_replace_with_yanked() {
 }
 
 ### Word boundary navigation ###
-
-# this-aaa-_?.----bbb is      a test
-# TODO: fix `foo - bar` backwards
-# TODO: fix w on first letter
-# TODO: fix b on last letter
+# TODO: this has a number of issues:
+# - On "a# t", `e` highlights "# t" but it should just highlight "#", then " t" on the second press
 function zhm_move_word_impl() {
     function is_word_char() {
         local char="${BUFFER:$1:1}"
-        [[ $char =~ [a-zA-Z_] ]]
+        [[ $char =~ [a-zA-Z0-9_] ]]
     }
     function is_whitespace() {
         local char="${BUFFER:$1:1}"
@@ -616,37 +613,15 @@ function zhm_move_word_impl() {
     local prev_anchor=$ZHM_ANCHOR
     local pos=$CURSOR
 
-    local initial_matcher= initial_non_matcher=
-    # TODO: combine this with the other $position case statement?
-    case $position in
-        "start")
-            initial_matcher=is_not_whitespace
-            initial_non_matcher=is_whitespace
-            ;;
-        "end")
-            initial_matcher=is_whitespace
-            initial_non_matcher=is_not_whitespace
-            ;;
-        *)
-            echo "Error: Invalid position '$position'" >&2
-            return 1
-            ;;
-    esac
-
-    # TODO: this is hacky, do we need it??
     local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
-    if (( prev_step != (-step) )) &&
-        $initial_matcher $pos &&
-        { ! within_bounds $((pos + step)) || $initial_non_matcher $((pos + step)) } &&
-        ! { ! within_bounds $((pos - step)) || $initial_non_matcher $((pos - step)) }
-    ; then
+    if (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]]; then
         ((pos += step))
     fi
     local new_anchor=$pos
 
     function consume_word_chars() {
         if within_bounds $((pos + step)) && is_whitespace $pos; then
-            # TODO: this is hacky, remove
+            # TODO: this is hacky
             ((pos += step))
         fi
         local word_matcher=
