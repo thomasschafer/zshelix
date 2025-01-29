@@ -8,26 +8,30 @@ temp_file=$(mktemp)
 function make_key_readable() {
     local key=$1
     local -A keymap=(
-        # Basic special keys
-        ['\e[A']='Up'      ['\e[B']='Down'
-        ['\e[C']='Right'   ['\e[D']='Left'
-        ['\e[1~']='Home'   ['\e[4~']='End'
+        ['\e[A']='Up'
+        ['\e[B']='Down'
+        ['\e[C']='Right'
+        ['\e[D']='Left'
+        ['\e[1~']='Home'
+        ['\e[4~']='End'
         ['\e[3~']='Delete'
         ['\e[3;3~']='Alt-Delete'
-        ['\e\e[3~']='Alt-Delete'  # Show double escape same as Alt
-        # Control keys
-        ['^M']='Enter'    ['^L']='Ctrl-l'
-        ['^N']='Ctrl-n'   ['^P']='Ctrl-p'
-        ['^R']='Ctrl-r'   ['^S']='Ctrl-s'
+        ['\e\e[3~']='Alt-Delete'
+        ['^M']='Enter'
+        ['^L']='Ctrl-l'
+        ['^N']='Ctrl-n'
+        ['^P']='Ctrl-p'
+        ['^R']='Ctrl-r'
+        ['^S']='Ctrl-s'
         ['^?']='Backspace'
-        # Alt combinations
-        ['\eb']='Alt-b'   ['\ef']='Alt-f'
-        ['\ed']='Alt-d'   ['\eB']='Alt-B'
-        ['\eF']='Alt-F'   ['\e;']='Alt-;'
-        # Compound specials
+        ['\eb']='Alt-b'
+        ['\ef']='Alt-f'
+        ['\ed']='Alt-d'
+        ['\eB']='Alt-B'
+        ['\eF']='Alt-F'
+        ['\e;']='Alt-;'
         ['\e\177']='Alt-Backspace'
         ['\e^?']='Alt-Backspace'
-        # Simple escape
         ['\e']='Esc'
     )
 

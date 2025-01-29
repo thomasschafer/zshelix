@@ -6,7 +6,22 @@ This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
 
 ## Installation
 
+### Manual Installation
+
+1. Clone this repository (replace `$HOME/zshelix` with a different directory if preferred):
+   ```sh
+   git clone https://github.com/thomasschafer/zshelix.git $HOME/zshelix
+   ```
+
+1. Source `zshelix.plugin.zsh` in your `.zshrc` file:
+   ```sh
+   source $HOME/zshelix/zshelix.plugin.zsh
+   ```
+
+### Using a Plugin Manager
+
 TODO
+
 
 ## Keybindings
 
