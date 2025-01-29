@@ -547,6 +547,7 @@ function zhm_replace_with_yanked() {
 }
 
 ### Word boundary navigation ###
+# TODO: this has some issues with single letter words, e.g. when moving back and forth in "a b c"
 function zhm_move_word_impl() {
     ## Helper functions ##
     function is_word_char() {
