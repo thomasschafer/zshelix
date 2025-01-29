@@ -384,20 +384,6 @@ function zhm_delete_char_forward() {
 
 ### Word operations ###
 # TODO: these should stop at punctuation etc. matching e.g. zhm_move_prev_word_start. Maybe just replace with built-in C-w?
-function zhm_delete_word_backward() {
-    local pos=$CURSOR
-    # Skip any spaces immediately before cursor
-    while ((pos > 0)) && [[ "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    # Then skip until we hit a space or start of line
-    while ((pos > 0)) && [[ ! "${BUFFER:$((pos-1)):1}" =~ [[:space:]] ]]; do
-        ((pos--))
-    done
-    zhm_update_buffer 1 "${BUFFER:0:$pos}${BUFFER:$CURSOR}"
-    zhm_set_cursor $pos
-}
-
 function zhm_delete_word_forward() {
     local pos=$CURSOR
     # Skip current word if we're in one
@@ -878,7 +864,6 @@ function zhm_initialise() {
         zhm_goto_file_start
         zhm_goto_last_line
         zhm_delete_word_forward
-        zhm_delete_word_backward
         zhm_delete_char_forward
         zhm_undo
         zhm_redo
@@ -896,6 +881,7 @@ function zhm_initialise() {
         zle -N $widget
     done
 
+    # Normal mode
     bindkey -N helix-normal-mode
     bindkey -M helix-normal-mode 'h' zhm_move_char_left
     bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down
@@ -940,30 +926,21 @@ function zhm_initialise() {
     bindkey -M helix-normal-mode '\e' zhm_normal_mode
     bindkey -M helix-normal-mode '^M' zhm_accept_and_clear
     bindkey -M helix-normal-mode '^L' clear-screen
-
-    # Bind normal mode history search
-    bindkey -M helix-normal-mode '^R' history-incremental-search-backward
-    bindkey -M helix-normal-mode '^S' history-incremental-search-forward
+    # History search
     bindkey -M helix-normal-mode '^P' up-line-or-history
     bindkey -M helix-normal-mode '^N' down-line-or-history
 
-    # TODO: alt-backspace leaves selection trail, presumably others do too
-    # Bind insert mode movement and editing keys
+    # Insert mode
     bindkey -M viins '\e' zhm_normal_mode
     bindkey -M viins '\eb' zhm_move_prev_word_start
     bindkey -M viins '\ef' zhm_move_next_word_start
     bindkey -M viins '\ed' zhm_delete_word_forward
     bindkey -M viins '\e[3~' zhm_delete_char_forward
-    bindkey -M viins '\e\177' zhm_delete_word_backward
-    bindkey -M viins '\e^?' zhm_delete_word_backward
+    bindkey -M viins '\e\177' backward-kill-word
+    bindkey -M viins '\e^?' backward-kill-word
     bindkey -M viins '\e[3;3~' zhm_delete_word_forward
     bindkey -M viins '\e\e[3~' zhm_delete_word_forward
     bindkey -M viins '^M' zhm_accept_and_clear
-    # Bind history search in insert mode
-    bindkey -M viins '^R' history-incremental-search-backward
-    bindkey -M viins '^S' history-incremental-search-forward
-    bindkey -M viins '^P' up-line-or-history
-    bindkey -M viins '^N' down-line-or-history
     bindkey -M viins '\eB' zhm_move_prev_word_start
     bindkey -M viins '\eF' zhm_move_next_word_start
     bindkey -M viins '\e[1~' zhm_goto_line_start
@@ -971,6 +948,11 @@ function zhm_initialise() {
     bindkey -M viins '\e[D' backward-char
     bindkey -M viins '\e[C' forward-char
     bindkey -M viins '^?' backward-delete-char
+    # History search
+    bindkey -M viins '^R' history-incremental-search-backward
+    bindkey -M viins '^S' history-incremental-search-forward
+    bindkey -M viins '^P' up-line-or-history
+    bindkey -M viins '^N' down-line-or-history
 
     # Set short timeout for escape key
     KEYTIMEOUT=1
