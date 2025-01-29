@@ -166,7 +166,7 @@ function zhm_clear_history() {
     zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
 }
 
-function zhm_accept_and_clear() {
+function zhm_accept_line() {
     zhm_clear_history
     zhm_remove_highlight
     zle accept-line
@@ -304,7 +304,7 @@ function zhm_normal_mode() {
     zhm_save_state
 }
 
-function zhm_select_mode_flip() {
+function zhm_select_mode() {
     if [[ "$ZHM_MODE" == "$ZHM_MODE_SELECT" ]]; then
         ZHM_MODE=$ZHM_MODE_NORMAL
     else
@@ -817,7 +817,7 @@ function zhm_initialise() {
     local -a widgets=(
         zhm_normal_mode
         zhm_insert_mode
-        zhm_select_mode_flip
+        zhm_select_mode
         zhm_move_char_left
         zhm_move_char_right
         zhm_append_mode
@@ -852,7 +852,7 @@ function zhm_initialise() {
         zhm_select_all
         zhm_move_visual_line_down
         zhm_move_visual_line_up
-        zhm_accept_and_clear
+        zhm_accept_line
     )
     for widget in $widgets; do
         zle -N $widget
@@ -860,76 +860,76 @@ function zhm_initialise() {
 
     # Normal mode
     bindkey -N helix-normal-mode
-    bindkey -M helix-normal-mode 'h' zhm_move_char_left
-    bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down
-    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up
-    bindkey -M helix-normal-mode 'l' zhm_move_char_right
-    bindkey -M helix-normal-mode '\e[D' zhm_move_char_left
-    bindkey -M helix-normal-mode '\e[B' zhm_move_visual_line_down
-    bindkey -M helix-normal-mode '\e[A' zhm_move_visual_line_up
-    bindkey -M helix-normal-mode '\e[C' zhm_move_char_right
-    bindkey -M helix-normal-mode 'a' zhm_append_mode
-    bindkey -M helix-normal-mode 'A' zhm_insert_at_line_end
-    bindkey -M helix-normal-mode 'i' zhm_insert_mode
-    bindkey -M helix-normal-mode 'I' zhm_insert_at_line_start
-    bindkey -M helix-normal-mode 'y' zhm_yank
-    bindkey -M helix-normal-mode 'c' zhm_change_selection
-    bindkey -M helix-normal-mode 'd' zhm_delete_selection
-    bindkey -M helix-normal-mode 'p' zhm_paste_after
-    bindkey -M helix-normal-mode 'P' zhm_paste_before
-    bindkey -M helix-normal-mode 'r' zhm_replace
-    bindkey -M helix-normal-mode 'R' zhm_replace_with_yanked
-    bindkey -M helix-normal-mode 'w' zhm_move_next_word_start
-    bindkey -M helix-normal-mode 'W' zhm_move_next_long_word_start
-    bindkey -M helix-normal-mode 'b' zhm_move_prev_word_start
-    bindkey -M helix-normal-mode 'B' zhm_move_prev_long_word_start
-    bindkey -M helix-normal-mode 'e' zhm_move_next_word_end
-    bindkey -M helix-normal-mode 'E' zhm_move_next_long_word_end
-    bindkey -M helix-normal-mode 'gh' zhm_goto_line_start
-    bindkey -M helix-normal-mode 'gl' zhm_goto_line_end
-    bindkey -M helix-normal-mode 'gs' zhm_goto_first_nonwhitespace
-    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start
-    bindkey -M helix-normal-mode 'ge' zhm_goto_last_line
-    bindkey -M helix-normal-mode 'u' zhm_undo
-    bindkey -M helix-normal-mode 'U' zhm_redo
-    bindkey -M helix-normal-mode 'D' zhm_debug_logs
-    bindkey -M helix-normal-mode 'x' zhm_extend_line_below
+    bindkey -M helix-normal-mode 'h' zhm_move_char_left  # DESC: Move left
+    bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
+    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up  # DESC: Move up (or back through history)
+    bindkey -M helix-normal-mode 'l' zhm_move_char_right  # DESC: Move right
+    bindkey -M helix-normal-mode '\e[D' zhm_move_char_left  # HIDDEN
+    bindkey -M helix-normal-mode '\e[B' zhm_move_visual_line_down  # HIDDEN
+    bindkey -M helix-normal-mode '\e[A' zhm_move_visual_line_up  # HIDDEN
+    bindkey -M helix-normal-mode '\e[C' zhm_move_char_right  # HIDDEN
+    bindkey -M helix-normal-mode 'a' zhm_append_mode  # DESC: Insert after selection (append)
+    bindkey -M helix-normal-mode 'A' zhm_insert_at_line_end  # DESC: Insert at the end of the line
+    bindkey -M helix-normal-mode 'i' zhm_insert_mode  # DESC: Insert before selection
+    bindkey -M helix-normal-mode 'I' zhm_insert_at_line_start  # DESC: Insert at the start of the line
+    bindkey -M helix-normal-mode 'y' zhm_yank  # DESC: Yank selection
+    bindkey -M helix-normal-mode 'c' zhm_change_selection  # DESC: Change selection (delete and enter insert mode)
+    bindkey -M helix-normal-mode 'd' zhm_delete_selection  # DESC: Delete selection
+    bindkey -M helix-normal-mode 'p' zhm_paste_after  # DESC: Paste after selection
+    bindkey -M helix-normal-mode 'P' zhm_paste_before  # DESC: Paste before selection
+    bindkey -M helix-normal-mode 'r' zhm_replace  # DESC: Replace with a character
+    bindkey -M helix-normal-mode 'R' zhm_replace_with_yanked  # DESC: Replace with yanked text
+    bindkey -M helix-normal-mode 'w' zhm_move_next_word_start  # DESC: Move next word start
+    bindkey -M helix-normal-mode 'W' zhm_move_next_long_word_start  # DESC: Move next WORD start
+    bindkey -M helix-normal-mode 'b' zhm_move_prev_word_start  # DESC: Move previous word start
+    bindkey -M helix-normal-mode 'B' zhm_move_prev_long_word_start  # DESC: Move previous WORD start
+    bindkey -M helix-normal-mode 'e' zhm_move_next_word_end  # DESC: Move next word end
+    bindkey -M helix-normal-mode 'E' zhm_move_next_long_word_end  # DESC: Move next WORD end
+    bindkey -M helix-normal-mode 'gh' zhm_goto_line_start  # DESC: Go to the start of the line
+    bindkey -M helix-normal-mode 'gl' zhm_goto_line_end  # DESC: Go to the end of the line
+    bindkey -M helix-normal-mode 'gs' zhm_goto_first_nonwhitespace  # DESC: Go to first non-whitespace character of the line
+    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start  # DESC: Go to line number <n> else start of file
+    bindkey -M helix-normal-mode 'ge' zhm_goto_last_line  # DESC: Go to the end of the file
+    bindkey -M helix-normal-mode 'u' zhm_undo  # DESC: Undo change
+    bindkey -M helix-normal-mode 'U' zhm_redo  # DESC: Redo change
+    bindkey -M helix-normal-mode 'D' zhm_debug_logs  # HIDDEN
+    bindkey -M helix-normal-mode 'x' zhm_extend_line_below  # DESC: Select current line, if already selected, extend to next line
     # TODO: the below should default to `extend_to_line_bounds` - override with config
-    bindkey -M helix-normal-mode 'X' zhm_extend_to_line_bounds
-    bindkey -M helix-normal-mode ';' zhm_collapse_selection
-    bindkey -M helix-normal-mode '\e;' zhm_flip_selections
-    bindkey -M helix-normal-mode '%' zhm_select_all
-    bindkey -M helix-normal-mode 'v' zhm_select_mode_flip
-    bindkey -M helix-normal-mode '\e' zhm_normal_mode
-    bindkey -M helix-normal-mode '^M' zhm_accept_and_clear
-    bindkey -M helix-normal-mode '^L' clear-screen
+    bindkey -M helix-normal-mode 'X' zhm_extend_to_line_bounds  # DESC: Extend selection to line bounds (line-wise selection)
+    bindkey -M helix-normal-mode ';' zhm_collapse_selection  # DESC: Collapse selection onto a single cursor
+    bindkey -M helix-normal-mode '\e;' zhm_flip_selections  # DESC: Flip selection cursor and anchor
+    bindkey -M helix-normal-mode '%' zhm_select_all  # DESC: Select entire file
+    bindkey -M helix-normal-mode 'v' zhm_select_mode  # DESC: Enter select (extend) mode
+    bindkey -M helix-normal-mode '\e' zhm_normal_mode  # DESC: Switch to normal mode
+    bindkey -M helix-normal-mode '^M' zhm_accept_line  # DESC: Run the command in the buffer
+    bindkey -M helix-normal-mode '^L' clear-screen  # DESC: clear the current buffer
     # History search
-    bindkey -M helix-normal-mode '^P' up-line-or-history
-    bindkey -M helix-normal-mode '^N' down-line-or-history
+    bindkey -M helix-normal-mode '^P' zhm_move_visual_line_up  # DESC: Move up (or back through history)
+    bindkey -M helix-normal-mode '^N' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
 
     # Insert mode
-    bindkey -M viins '\e' zhm_normal_mode
-    bindkey -M viins '\eb' zhm_move_prev_word_start
-    bindkey -M viins '\ef' zhm_move_next_word_start
-    bindkey -M viins '\ed' delete-word
-    bindkey -M viins '\e[3~' delete-char
-    bindkey -M viins '\e\177' backward-kill-word
-    bindkey -M viins '\e^?' backward-kill-word
-    bindkey -M viins '\e[3;3~' delete-word
-    bindkey -M viins '\e\e[3~' delete-word
-    bindkey -M viins '^M' zhm_accept_and_clear
-    bindkey -M viins '\eB' zhm_move_prev_word_start
-    bindkey -M viins '\eF' zhm_move_next_word_start
-    bindkey -M viins '\e[1~' zhm_goto_line_start
-    bindkey -M viins '\e[4~' zhm_goto_line_end
-    bindkey -M viins '\e[D' backward-char
-    bindkey -M viins '\e[C' forward-char
-    bindkey -M viins '^?' backward-delete-char
+    bindkey -M viins '\e' zhm_normal_mode  # DESC: Switch to normal mode
+    bindkey -M viins '\eb' zhm_move_prev_word_start  # DESC: Move previous word start
+    bindkey -M viins '\ef' zhm_move_next_word_start  # DESC: Move next word start 
+    bindkey -M viins '\ed' delete-word  # DESC: Delete next word
+    bindkey -M viins '\e[3~' delete-char  # DESC: Delete next char
+    bindkey -M viins '\e\177' backward-kill-word  # DESC: Delete previous word
+    bindkey -M viins '\e^?' backward-kill-word  # DESC: Delete previous word
+    bindkey -M viins '\e[3;3~' delete-word  # DESC: Delete next word
+    bindkey -M viins '\e\e[3~' delete-word  # DESC: Delete next word
+    bindkey -M viins '^M' zhm_accept_line  # DESC: Run the command in the buffer
+    bindkey -M viins '\eB' zhm_move_prev_word_start  # HIDDEN
+    bindkey -M viins '\eF' zhm_move_next_word_start  # HIDDEN
+    bindkey -M viins '\e[1~' zhm_goto_line_start  # DESC: Move to line start
+    bindkey -M viins '\e[4~' zhm_goto_line_end  # DESC: Move to line end
+    bindkey -M viins '\e[D' backward-char  # DESC: Backward a char
+    bindkey -M viins '\e[C' forward-char  # DESC: Forward a char
+    bindkey -M viins '^?' backward-delete-char  # DESC: Delete previous char
     # History search
-    bindkey -M viins '^R' history-incremental-search-backward
-    bindkey -M viins '^S' history-incremental-search-forward
-    bindkey -M viins '^P' up-line-or-history
-    bindkey -M viins '^N' down-line-or-history
+    bindkey -M viins '^R' history-incremental-search-backward  # DESC: Search history backward
+    bindkey -M viins '^S' history-incremental-search-forward  # DESC: Search history forward
+    bindkey -M viins '^P' zhm_move_visual_line_up  # DESC: Move up (or back through history)
+    bindkey -M viins '^N' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
 
     # Set short timeout for escape key
     KEYTIMEOUT=1
