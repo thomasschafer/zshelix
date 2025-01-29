@@ -548,20 +548,25 @@ function zhm_replace_with_yanked() {
 
 ### Word boundary navigation ###
 function zhm_move_word_impl() {
+    ## Helper functions ##
     function is_word_char() {
         local char="${BUFFER:$1:1}"
         [[ $char =~ [a-zA-Z0-9_] ]]
     }
+
     function is_whitespace() {
         local char="${BUFFER:$1:1}"
         [[ $char =~ [[:space:]] ]]
     }
+
     function is_not_whitespace() {
         ! is_whitespace "$1"
     }
+
     function is_symbol() {
         ! is_word_char "$1" && ! is_whitespace "$1"
     }
+
     function char_type() {
         local pos=$1
         if is_word_char $pos; then
@@ -573,29 +578,6 @@ function zhm_move_word_impl() {
         fi
     }
 
-    if [[ $# -ne 3 ]]; then
-        echo "Error (zhm_move_word_impl): Requires exactly 3 arguments, found '$*'" >&2
-        return 1
-    fi
-
-    local direction=$1  # next | prev
-    local position=$2   # start | end
-    local word_type=$3  # word | long_word
-
-    local step=
-    case $direction in
-        "next")
-            step=1
-            ;;
-        "prev")
-            step=-1
-            ;;
-        *)
-            echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
-            return 1
-            ;;
-    esac
-
     function within_bounds() {
         local num=$1
         if [[ ! $num =~ ^-?[0-9]+$ ]]; then
@@ -604,43 +586,6 @@ function zhm_move_word_impl() {
         fi
         (( num >= 0 && num <= len - 1 ))
     }
-
-    local whitespace_first=
-    case $position in
-        "start")
-            case $direction in
-                "next")
-                    whitespace_first=0
-                    ;;
-                "prev")
-                    whitespace_first=1
-                    ;;
-                *)
-                    echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
-                    return 1
-                    ;;
-            esac
-            ;;
-        "end")
-            whitespace_first=1
-            ;;
-        *)
-            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
-            return 1
-            ;;
-    esac
-
-    local len=$#BUFFER
-
-    local prev_cursor=$CURSOR
-    local prev_anchor=$ZHM_ANCHOR
-    local pos=$CURSOR
-
-    local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
-    if (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]]; then
-        ((pos += step))
-    fi
-    local new_anchor=$pos
 
     function consume_word_chars() {
         if ((whitespace_first)) && within_bounds $((pos + step)) && is_whitespace $pos; then
@@ -680,6 +625,68 @@ function zhm_move_word_impl() {
             ((pos += step))
         done
     }
+
+    ## Argument parsing ##
+    if [[ $# -ne 3 ]]; then
+        echo "Error (zhm_move_word_impl): Requires exactly 3 arguments, found '$*'" >&2
+        return 1
+    fi
+
+    local direction=$1  # next | prev
+    local position=$2   # start | end
+    local word_type=$3  # word | long_word
+
+    local step=
+    case $direction in
+        "next")
+            step=1
+            ;;
+        "prev")
+            step=-1
+            ;;
+        *)
+            echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
+            return 1
+            ;;
+    esac
+
+    local whitespace_first=
+    case $position in
+        "start")
+            case $direction in
+                "next")
+                    whitespace_first=0
+                    ;;
+                "prev")
+                    whitespace_first=1
+                    ;;
+                *)
+                    echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
+                    return 1
+                    ;;
+            esac
+            ;;
+        "end")
+            whitespace_first=1
+            ;;
+        *)
+            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
+            return 1
+            ;;
+    esac
+
+    ## Logic ##
+    local len=$#BUFFER
+
+    local prev_cursor=$CURSOR
+    local prev_anchor=$ZHM_ANCHOR
+    local pos=$CURSOR
+
+    local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
+    if (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]]; then
+        ((pos += step))
+    fi
+    local new_anchor=$pos
 
    if ((whitespace_first)); then
         consume_whitespace
