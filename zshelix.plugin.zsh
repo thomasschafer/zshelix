@@ -547,8 +547,6 @@ function zhm_replace_with_yanked() {
 }
 
 ### Word boundary navigation ###
-# TODO: this has a number of issues:
-# - On "a# t", `e` highlights "# t" but it should just highlight "#", then " t" on the second press
 function zhm_move_word_impl() {
     function is_word_char() {
         local char="${BUFFER:$1:1}"
@@ -607,6 +605,31 @@ function zhm_move_word_impl() {
         (( num >= 0 && num <= len - 1 ))
     }
 
+    local whitespace_first=
+    case $position in
+        "start")
+            case $direction in
+                "next")
+                    whitespace_first=0
+                    ;;
+                "prev")
+                    whitespace_first=1
+                    ;;
+                *)
+                    echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
+                    return 1
+                    ;;
+            esac
+            ;;
+        "end")
+            whitespace_first=1
+            ;;
+        *)
+            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
+            return 1
+            ;;
+    esac
+
     local len=$#BUFFER
 
     local prev_cursor=$CURSOR
@@ -620,7 +643,7 @@ function zhm_move_word_impl() {
     local new_anchor=$pos
 
     function consume_word_chars() {
-        if within_bounds $((pos + step)) && is_whitespace $pos; then
+        if ((whitespace_first)) && within_bounds $((pos + step)) && is_whitespace $pos; then
             # TODO: this is hacky
             ((pos += step))
         fi
@@ -649,33 +672,23 @@ function zhm_move_word_impl() {
         fi
     }
     function consume_whitespace() {
+        if ((whitespace_first)) && is_not_whitespace $pos; then
+            # TODO: this is hacky
+            return 0
+        fi
         while within_bounds $((pos + step)) && is_whitespace $((pos + step)); do
             ((pos += step))
         done
     }
 
-    case $position in
-        "start")
-            case $direction in
-                "next")
-                    consume_word_chars
-                    consume_whitespace
-                    ;;
-                "prev")
-                    consume_whitespace
-                    consume_word_chars
-                    ;;
-            esac
-            ;;
-        "end")
-            consume_whitespace
-            consume_word_chars
-            ;;
-        *)
-            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
-            return 1
-            ;;
-    esac
+   if ((whitespace_first)); then
+        consume_whitespace
+        consume_word_chars
+    else
+        consume_word_chars
+        consume_whitespace
+    fi
+
 
     local new_cursor=$pos
 
