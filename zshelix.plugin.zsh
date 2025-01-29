@@ -376,27 +376,6 @@ function zhm_insert_at_line_start() {
     zhm_insert_mode_impl
 }
 
-function zhm_delete_char_forward() {
-    if ((CURSOR < $#BUFFER)); then
-        zhm_update_buffer 1 "${BUFFER:0:$CURSOR}${BUFFER:$((CURSOR+1))}"
-    fi
-}
-
-### Word operations ###
-# TODO: these should stop at punctuation etc. matching e.g. zhm_move_prev_word_start. Maybe just replace with built-in C-w?
-function zhm_delete_word_forward() {
-    local pos=$CURSOR
-    # Skip current word if we're in one
-    while ((pos < $#BUFFER)) && [[ ! "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    # Skip spaces
-    while ((pos < $#BUFFER)) && [[ "${BUFFER:$pos:1}" =~ [[:space:]] ]]; do
-        ((pos++))
-    done
-    zhm_update_buffer 1 "${BUFFER:0:$CURSOR}${BUFFER:$pos}"
-}
-
 ### Selection operations ###
 function zhm_operate_on_selection() {
     local operation=$1  # "yank", "cut", or "delete"
@@ -863,8 +842,6 @@ function zhm_initialise() {
         zhm_goto_first_nonwhitespace
         zhm_goto_file_start
         zhm_goto_last_line
-        zhm_delete_word_forward
-        zhm_delete_char_forward
         zhm_undo
         zhm_redo
         zhm_debug_logs
@@ -934,12 +911,12 @@ function zhm_initialise() {
     bindkey -M viins '\e' zhm_normal_mode
     bindkey -M viins '\eb' zhm_move_prev_word_start
     bindkey -M viins '\ef' zhm_move_next_word_start
-    bindkey -M viins '\ed' zhm_delete_word_forward
-    bindkey -M viins '\e[3~' zhm_delete_char_forward
+    bindkey -M viins '\ed' delete-word
+    bindkey -M viins '\e[3~' delete-char
     bindkey -M viins '\e\177' backward-kill-word
     bindkey -M viins '\e^?' backward-kill-word
-    bindkey -M viins '\e[3;3~' zhm_delete_word_forward
-    bindkey -M viins '\e\e[3~' zhm_delete_word_forward
+    bindkey -M viins '\e[3;3~' delete-word
+    bindkey -M viins '\e\e[3~' delete-word
     bindkey -M viins '^M' zhm_accept_and_clear
     bindkey -M viins '\eB' zhm_move_prev_word_start
     bindkey -M viins '\eF' zhm_move_next_word_start
