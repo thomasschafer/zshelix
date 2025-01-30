@@ -60,11 +60,11 @@ function print_mappings() {
             key=$(make_key_readable "${match[1]}")
             func="${match[2]#zhm_}"
             desc="${match[4]}"
-            entry="| \`$key\` | $desc | $func |"
+            entry="| \`$key\` | $desc | \`$func\` |"
         elif [[ $line =~ "$pattern'([^']+)' ([^ ]+)" ]]; then
             key=$(make_key_readable "${match[1]}")
             func="${match[2]#zhm_}"
-            entry="| \`$key\` | | $func |"
+            entry="| \`$key\` | | \`$func\` |"
         else
             continue
         fi
