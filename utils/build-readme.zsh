@@ -1,9 +1,16 @@
 #!/usr/bin/env zsh
+set -eo pipefail
+set -e
 
-plugin_file="zshelix.plugin.zsh"
-template_file="utils/README.md.template"
-readme_file="README.md"
-temp_file=$(mktemp)
+readonly PLUGIN="zshelix.plugin.zsh"
+readonly TEMPLATE="utils/README.md.template"
+readonly README="README.md"
+
+[[ -f $PLUGIN ]] || { echo "Error: $PLUGIN not found"; exit 1; }
+[[ -f $TEMPLATE ]] || { echo "Error: $TEMPLATE not found"; exit 1; }
+
+temp_file=$(mktemp) || { echo "Error: Failed to create temp file"; exit 1; }
+trap "rm -f '$temp_file'" EXIT
 
 function make_key_readable() {
     local key=$1
@@ -46,7 +53,7 @@ function print_mappings() {
     echo "| Key | Description | Function |"
     echo "|-----|-------------|----------|"
 
-    grep "$pattern" "$plugin_file" | while read -r line; do
+    grep "$pattern" "$PLUGIN" | while read -r line; do
         [[ $line =~ "#.*HIDDEN" ]] && continue
         
         if [[ $line =~ "$pattern'([^']+)' ([^ ]+)(.*)# DESC: (.*)" ]]; then
@@ -77,17 +84,15 @@ function print_mappings() {
     echo "### Insert Mode"
     echo
     print_mappings "insert" "bindkey -M viins "
-} > $temp_file
+} > "$temp_file" || { echo "Error: Failed to write to temp file"; exit 1; }
 
 perl -e '
     local $/;
-    open(TEMPLATE, "<", "'$template_file'") or die "Cannot open template: $!";
-    open(CONTENT, "<", "'$temp_file'") or die "Cannot open content: $!";
-    open(OUTPUT, ">", "'$readme_file'") or die "Cannot open output: $!";
+    open(TEMPLATE, "<", "'"$TEMPLATE"'") or die "Cannot open template: $!";
+    open(CONTENT, "<", "'"$temp_file"'") or die "Cannot open content: $!";
+    open(OUTPUT, ">", "'"$README"'") or die "Cannot open output: $!";
     $template = <TEMPLATE>;
     $content = <CONTENT>;
     $template =~ s/<!-- KEYBINDINGS -->/$content/g;
     print OUTPUT $template;
-'
-
-rm $temp_file
+' || { echo "Error: Failed to generate $README"; exit 1; }

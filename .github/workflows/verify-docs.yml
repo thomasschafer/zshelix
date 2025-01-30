@@ -1,0 +1,32 @@
+name: Verify documentation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  verify-docs:
+    name: Verify README matches keybindings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install zsh
+
+      - name: Build readme
+        run: ./utils/build-readme.zsh
+
+      - name: Check for documentation changes
+        run: |
+          git diff
+          git diff-files --quiet || (
+            echo "README.md is out of sync with keybindings"
+            echo "Run `./utils/build-readme.zsh`, commit the changes and push again"
+            exit 1
+          )
