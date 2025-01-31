@@ -4,6 +4,7 @@ This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
 
 ![zshelix preview](media/preview.png)
 
+
 ## Installation
 
 ### Manual Installation
@@ -91,3 +92,8 @@ TODO
 | `Ctrl-p` | Move up (or back through history) | `move_visual_line_up` |
 | `Ctrl-n` | Move down (or forward through history) | `move_visual_line_down` |
 
+
+
+## Similar projects
+
+[zsh-helix-mode](https://github.com/Multirious/zsh-helix-mode) also provides Helix keybindings for Zsh, and (at the time of writing) has many more features.

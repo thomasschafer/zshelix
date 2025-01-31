@@ -4,6 +4,7 @@ This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
 
 ![zshelix preview](media/preview.png)
 
+
 ## Installation
 
 ### Manual Installation
@@ -26,3 +27,8 @@ TODO
 ## Keybindings
 
 <!-- KEYBINDINGS -->
+
+
+## Similar projects
+
+[zsh-helix-mode](https://github.com/Multirious/zsh-helix-mode) also provides Helix keybindings for Zsh, and (at the time of writing) has many more features.
