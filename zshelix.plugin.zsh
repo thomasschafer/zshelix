@@ -649,7 +649,9 @@ function zhm_move_word_impl() {
     local pos=$CURSOR
 
     local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
-    if (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]]; then
+    if [[ "$ZHM_MODE" == "$ZHM_MODE_SELECT" ]] || \
+        ( (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]] ); then
+
         ((pos += step))
     fi
     local new_anchor=$pos
