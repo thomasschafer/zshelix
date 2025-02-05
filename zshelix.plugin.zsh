@@ -1,21 +1,19 @@
+ZHM_CURSOR_BLOCK='\e[2 q'
+ZHM_CURSOR_BEAM='\e[6 q'
+ZHM_CURSOR_BAR='\e[4 q'
+
+: ${ZHM_CURSOR_NORMAL:=$ZHM_CURSOR_BLOCK}
+: ${ZHM_CURSOR_INSERT:=$ZHM_CURSOR_BEAM}
+: ${ZHM_CURSOR_SELECT:=$ZHM_CURSOR_BAR}
+
 typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
 
-typeset -g ZHM_CURSOR_NORMAL='\e[2 q'
-typeset -g ZHM_CURSOR_INSERT='\e[6 q'
-typeset -g ZHM_CURSOR_SELECT='\e[4 q'
-
-# typeset -g ZHM_CURSOR_NORMAL=$'\e[2 q\e]12;#b8c0e0\a'
-# typeset -g ZHM_CURSOR_INSERT=$'\e[6 q\e]12;#f4dbd6\a'
-# typeset -g ZHM_CURSOR_SELECT=$'\e[2 q\e]12;#f5a97f\a'
-
-typeset -g ZHM_MODE_NORMAL="NORMAL"
 typeset -g ZHM_MODE_INSERT="INSERT"
 typeset -g ZHM_MODE_SELECT="SELECT"
 
 typeset -g ZHM_MOVEMENT_MOVE="MOVEMENT_MOVE"
 typeset -g ZHM_MOVEMENT_EXTEND="MOVEMENT_EXTEND"
 
-typeset -gA ZHM_VALID_MODES=($ZHM_MODE_NORMAL 1 $ZHM_MODE_INSERT 1 $ZHM_MODE_SELECT 1)
 typeset -g ZHM_MODE=$ZHM_MODE_INSERT
 
 typeset -ga ZHM_UNDO_STATES=() # cursor_idx, anchor_idx, buffer_text
@@ -950,6 +948,8 @@ function zhm_initialise() {
 
     # TODO (hacky): we shouldn't need this
     zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
+
+    zhm_print_cursor
 }
 
 zhm_initialise

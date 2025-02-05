@@ -26,7 +26,7 @@ jobs:
         run: |
           git diff
           git diff-files --quiet || (
-            echo "README.md is out of sync with keybindings"
-            echo "Run `./utils/build-readme.zsh`, commit the changes and push again"
+            echo "README.md is out of sync with utils/README.md.template"
+            echo "Ensure that utils/README.md.template is up-to-date, run ./utils/build-readme.zsh, commit the changes and push again"
             exit 1
           )

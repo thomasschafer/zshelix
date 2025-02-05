@@ -24,6 +24,23 @@ This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
 TODO
 
 
+## Configuration
+
+Ensure that any configuration happens before the plugin is initialised, i.e. that any configuration lines are above the line in your `.zshrc` in which you `source` the plugin.
+
+### Cursor styles
+
+To configure the cursor styles in each mode you can override the following three values (updating the string values as required):
+
+```
+ZHM_CURSOR_NORMAL=$'\e[2 q\e]12;#b8c0e0\a'
+ZHM_CURSOR_INSERT=$'\e[2 q\e]12;#f4dbd6\a'
+ZHM_CURSOR_SELECT=$'\e[2 q\e]12;#f5a97f\a'
+```
+
+You can also use `$ZHM_CURSOR_BLOCK`, `$ZHM_CURSOR_BEAM` and `$ZHM_CURSOR_BAR` as values for block, beam and bar cursors respectively.
+
+
 ## Keybindings
 
 ### Normal Mode
