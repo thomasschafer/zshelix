@@ -23,6 +23,10 @@ typeset -g ZHM_UNDO_INDEX=-1
 typeset -g ZHM_ANCHOR=-1
 typeset -g ZHM_CLIPBOARD=""
 
+# System clipboard integration (set ZSH_HELIX_SYSTEM_CLIPBOARD=1 to enable)
+# Currently just works with pbcopy/pbpaste
+: ${ZSH_HELIX_SYSTEM_CLIPBOARD:=0}
+
 ### Utility functions ###
 function zhm_sign() {
     local num=$1
@@ -413,6 +417,11 @@ function zhm_operate_on_selection() {
 
 function zhm_yank() {
     zhm_operate_on_selection "yank"
+
+    # Copy to system clipboard if enabled
+    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" && -n "$ZHM_CUT_BUFFER" ]]; then
+        printf '%s' "$ZHM_CUT_BUFFER" | pbcopy
+    fi
 }
 
 function zhm_change_selection() {
@@ -426,7 +435,16 @@ function zhm_delete_selection() {
 function zhm_paste() {
     local before=$1  # 1 for paste before, 0 for paste after
 
-    if [[ -z "$ZHM_CUT_BUFFER" ]]; then
+    # Use system clipboard content if enabled and available
+    local paste_content="$ZHM_CUT_BUFFER"
+    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
+        local system_clipboard=$(pbpaste 2>/dev/null)
+        if [[ -n "$system_clipboard" ]]; then
+            paste_content="$system_clipboard"
+        fi
+    fi
+
+    if [[ -z "$paste_content" ]]; then
         return
     fi
     local bounds=($(zhm_get_selection_bounds))
@@ -439,10 +457,10 @@ function zhm_paste() {
         ((paste_pos--))
     fi
 
-    zhm_update_buffer 1 "${BUFFER:0:$paste_pos}${ZHM_CUT_BUFFER}${BUFFER:$paste_pos}"
+    zhm_update_buffer 1 "${BUFFER:0:$paste_pos}${paste_content}${BUFFER:$paste_pos}"
 
     local pos1=$paste_pos
-    local pos2=$((paste_pos + ${#ZHM_CUT_BUFFER} - 1))
+    local pos2=$((paste_pos + ${#paste_content} - 1))
 
     # Select pasted contents
     local ordering=$(zhm_sign $((CURSOR - ZHM_ANCHOR)))
@@ -494,16 +512,26 @@ function zhm_replace() {
 
 function zhm_replace_with_yanked() {
     local bounds=($(zhm_get_selection_bounds))
-    if ((${#bounds} != 2)) || [[ -z "$ZHM_CUT_BUFFER" ]]; then
+
+    # Use system clipboard content if enabled and available
+    local replace_content="$ZHM_CUT_BUFFER"
+    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
+        local system_clipboard=$(pbpaste 2>/dev/null)
+        if [[ -n "$system_clipboard" ]]; then
+            replace_content="$system_clipboard"
+        fi
+    fi
+
+    if ((${#bounds} != 2)) || [[ -z "$replace_content" ]]; then
         return 1
     fi
     local start=$bounds[1]
     local end=$bounds[2]
 
-    zhm_update_buffer 1 "${BUFFER:0:$start}${ZHM_CUT_BUFFER}${BUFFER:$end}"
+    zhm_update_buffer 1 "${BUFFER:0:$start}${replace_content}${BUFFER:$end}"
 
     # Select pasted contents
-    local new_cursor=$((start + ${#ZHM_CUT_BUFFER} - 1))
+    local new_cursor=$((start + ${#replace_content} - 1))
     zhm_set_cursor_and_anchor $new_cursor $start $ZHM_MOVEMENT_MOVE
 
     zhm_normal_mode
@@ -917,7 +945,7 @@ function zhm_initialise() {
     bindkey -M viins '\e' zhm_normal_mode  # DESC: Switch to normal mode
     # Movement
     bindkey -M viins '\eb' zhm_move_prev_word_start  # DESC: Move previous word start
-    bindkey -M viins '\ef' zhm_move_next_word_start  # DESC: Move next word start 
+    bindkey -M viins '\ef' zhm_move_next_word_start  # DESC: Move next word start
     bindkey -M viins '\eB' zhm_move_prev_word_start  # HIDDEN
     bindkey -M viins '\eF' zhm_move_next_word_start  # HIDDEN
     bindkey -M viins '\e[D' backward-char  # DESC: Backward a char
