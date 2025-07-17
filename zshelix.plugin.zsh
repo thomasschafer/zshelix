@@ -964,6 +964,7 @@ function zhm_initialise() {
     # History search
     bindkey -M viins '^R' history-incremental-search-backward  # DESC: Search history backward
     bindkey -M viins '^S' history-incremental-search-forward  # DESC: Search history forward
+    bindkey -M viins '^F' history-incremental-search-forward  # DESC: Search history forward
     bindkey -M viins '^P' zhm_move_visual_line_up  # DESC: Move up (or back through history)
     bindkey -M viins '^N' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
 

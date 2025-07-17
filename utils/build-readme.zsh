@@ -30,6 +30,7 @@ function make_key_readable() {
         ['^P']='Ctrl-p'
         ['^R']='Ctrl-r'
         ['^S']='Ctrl-s'
+        ['^F']='Ctrl-f'
         ['^?']='Backspace'
         ['\eb']='Alt-b'
         ['\ef']='Alt-f'

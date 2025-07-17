@@ -106,6 +106,7 @@ You can also use `$ZHM_CURSOR_BLOCK`, `$ZHM_CURSOR_BEAM` and `$ZHM_CURSOR_BAR` a
 | `Enter` | Run the command in the buffer | `accept_line` |
 | `Ctrl-r` | Search history backward | `history-incremental-search-backward` |
 | `Ctrl-s` | Search history forward | `history-incremental-search-forward` |
+| `Ctrl-f` | Search history forward | `history-incremental-search-forward` |
 | `Ctrl-p` | Move up (or back through history) | `move_visual_line_up` |
 | `Ctrl-n` | Move down (or forward through history) | `move_visual_line_down` |
 
