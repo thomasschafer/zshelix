@@ -24,8 +24,50 @@ typeset -g ZHM_ANCHOR=-1
 typeset -g ZHM_CLIPBOARD=""
 
 # System clipboard integration (set ZSH_HELIX_SYSTEM_CLIPBOARD=1 to enable)
-# Currently just works with pbcopy/pbpaste
 : ${ZSH_HELIX_SYSTEM_CLIPBOARD:=0}
+
+function zhm_clipboard_copy() {
+    local input
+    input=$(cat)
+
+    if [[ "$(uname)" == "Darwin" ]]; then
+        printf '%s' "$input" | pbcopy
+    elif [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-copy &>/dev/null; then
+        printf '%s' "$input" | wl-copy
+    elif [[ -n "$DISPLAY" ]]; then
+        if command -v xclip &>/dev/null; then
+            printf '%s' "$input" | xclip -selection clipboard
+        elif command -v xsel &>/dev/null; then
+            printf '%s' "$input" | xsel --clipboard --input
+        else
+            return 1
+        fi
+    elif [[ -n "$TMUX" ]]; then
+        tmux set-buffer -- "$input"
+    else
+        return 1
+    fi
+}
+
+function zhm_clipboard_paste() {
+    if [[ "$(uname)" == "Darwin" ]]; then
+        pbpaste
+    elif [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-paste &>/dev/null; then
+        wl-paste
+    elif [[ -n "$DISPLAY" ]]; then
+        if command -v xclip &>/dev/null; then
+            xclip -selection clipboard -o
+        elif command -v xsel &>/dev/null; then
+            xsel --clipboard --output
+        else
+            return 1
+        fi
+    elif [[ -n "$TMUX" ]]; then
+        tmux show-buffer
+    else
+        return 1
+    fi
+}
 
 ### Utility functions ###
 function zhm_sign() {
@@ -420,7 +462,7 @@ function zhm_yank() {
 
     # Copy to system clipboard if enabled
     if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" && -n "$ZHM_CUT_BUFFER" ]]; then
-        printf '%s' "$ZHM_CUT_BUFFER" | pbcopy
+        printf '%s' "$ZHM_CUT_BUFFER" | zhm_clipboard_copy
     fi
 }
 
@@ -438,7 +480,7 @@ function zhm_paste() {
     # Use system clipboard content if enabled and available
     local paste_content="$ZHM_CUT_BUFFER"
     if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
-        local system_clipboard=$(pbpaste 2>/dev/null)
+        local system_clipboard=$(zhm_clipboard_paste 2>/dev/null)
         if [[ -n "$system_clipboard" ]]; then
             paste_content="$system_clipboard"
         fi
@@ -516,7 +558,7 @@ function zhm_replace_with_yanked() {
     # Use system clipboard content if enabled and available
     local replace_content="$ZHM_CUT_BUFFER"
     if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
-        local system_clipboard=$(pbpaste 2>/dev/null)
+        local system_clipboard=$(zhm_clipboard_paste 2>/dev/null)
         if [[ -n "$system_clipboard" ]]; then
             replace_content="$system_clipboard"
         fi
@@ -985,4 +1027,4 @@ zhm_initialise
 
 # TODO:
 # - ADD TESTS!
-# - Integrate with system clipboard and add options for delete without yanking
+# - Add option for delete without yanking
