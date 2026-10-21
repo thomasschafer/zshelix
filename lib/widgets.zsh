@@ -560,6 +560,10 @@ function _zhm_regex_matches() {
         if (( be > limit )); then
             # The match runs past the end of the range: match within it.
             if (( off >= limit )); then
+                # Only an empty match at the end of the range fits.
+                if (( last_end != limit )) && _zhm_regex_matches_empty; then
+                    reply+=( $to $to )
+                fi
                 break
             fi
             pcre_match -b -n $off -- "$prefix" || break

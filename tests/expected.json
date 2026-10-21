@@ -775,6 +775,18 @@
 "NOR",
 "XY«a¦‡»b\n"
 ],
+"[\"abc def\\n\", \"%sb*<ret>\"]": [
+"NOR",
+"«a¦‡»«b¦»c« ¦»«d¦»«e¦»«f¦»«\n¦»"
+],
+"[\"abc def\\n\", \"vlsx*<ret>\"]": [
+"SEL",
+"«a¦‡»«b¦»c def\n"
+],
+"[\"abc def\\n\", \"wvlsd*<ret>\"]": [
+"SEL",
+"«a¦‡»«b¦»«c¦»« ¦»«d¦»ef\n"
+],
 "[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwa<esc>\"]": [
 "NOR",
 "«a¦‡»lpha beta gamma delta\nepsilon zeta eta theta\n"
@@ -3698,6 +3710,18 @@
 "[\"x\\n\", \"?$<ret>\"]": [
 "NOR",
 "x\n«¦‡»"
+],
+"[\"x\\n\", \"?x*<ret>\"]": [
+"NOR",
+"«x¦‡»\n"
+],
+"[\"x\\n\", \"?x*<ret><esc><esc>\"]": [
+"NOR",
+"«x¦‡»\n"
+],
+"[\"x\\n\", \"?x+<ret>\"]": [
+"NOR",
+"«x¦‡»\n"
 ],
 "[\"x\\n\", \"b\"]": [
 "NOR",

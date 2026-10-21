@@ -66,3 +66,12 @@ ax<esc>g.
 wd<esc>g.
 %sl<ret>cX<esc>g.
 xdg.
+text: x\n
+?x*<ret><esc><esc>
+text: x\n
+?x*<ret>
+?x+<ret>
+text: abc def
+%sb*<ret>
+vlsx*<ret>
+wvlsd*<ret>
