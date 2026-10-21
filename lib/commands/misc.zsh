@@ -433,16 +433,15 @@ function _zhm_cmd_noop() {
 
 ### Command mode ###
 
+# Typable commands (`:`), ported from `helix_term::commands::typed` where they
+# make sense on a command line. Maps names and aliases to handlers.
 typeset -gA _ZHM_TYPABLE=(
     sort sort
-    rsort rsort
-    reverse-selection-contents reverse
-    pipe pipe
+    pipe pipe '|' pipe
     pipe-to pipe-to
     insert-output insert-output
     append-output append-output
-    run-shell-command run-shell-command
-    sh run-shell-command
+    run-shell-command run-shell-command sh run-shell-command '!' run-shell-command
     yank-join yank-join
     clipboard-yank clipboard-yank
     clipboard-yank-join clipboard-yank-join
@@ -454,36 +453,78 @@ typeset -gA _ZHM_TYPABLE=(
     primary-clipboard-paste-after primary-clipboard-paste-after
     primary-clipboard-paste-before primary-clipboard-paste-before
     primary-clipboard-paste-replace primary-clipboard-paste-replace
+    show-clipboard-provider show-clipboard-provider
+    set-register set-register
     clear-register clear-register
     echo echo
-    goto goto
-    g goto
-    earlier earlier
-    ear earlier
-    later later
-    lat later
-    write write
-    w write
-    x write
-    wq write
-    quit quit
-    q quit
-    q! quit
-    set-option set
-    set set
+    noop noop
+    goto goto g goto
+    earlier earlier ear earlier
+    later later lat later
+    character-info character-info char character-info
+    change-current-directory cd cd cd
+    show-directory pwd pwd pwd
+    read read r read
+    indent-style indent-style
+    redraw redraw
+    write write w write write! write update write u write
+    write-quit write wq write wq! write exit write x write xit write x! write
+    quit quit q quit quit! quit q! quit cquit quit cq quit
 )
+
+function _zhm_typable_sort() {
+    local -i reverse=0 insensitive=0
+    local arg
+    for arg in "$@"; do
+        case $arg in
+            (-r|--reverse) reverse=1 ;;
+            (-i|--insensitive) insensitive=1 ;;
+            (*) _zhm_error "unknown flag '$arg'"; return 1 ;;
+        esac
+    done
+    if (( ${#_zhm_sa} == 1 )); then
+        _zhm_error "Sorting requires multiple selections. Hint: split selection first"
+        return 1
+    fi
+    _zhm_selection_fragments
+    local -a frags sorted
+    frags=( "${reply[@]}" )
+    # Sort by code point, as Rust compares strings.
+    () {
+        local LC_ALL=C
+        local -a keyed
+        local -i i
+        for (( i = 1; i <= ${#frags}; i++ )); do
+            if (( insensitive )); then
+                keyed+=( "${(L)frags[i]}"$'\0'$i )
+            else
+                keyed+=( "${frags[i]}"$'\0'$i )
+            fi
+        done
+        if (( reverse )); then keyed=( "${(@O)keyed}" ); else keyed=( "${(@o)keyed}" ); fi
+        local k
+        for k in "${keyed[@]}"; do
+            sorted+=( "${frags[${k##*$'\0'}]}" )
+        done
+    }
+    _zhm_changes_reset
+    local -i i
+    for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
+        local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
+        _zhm_change $(( a < h ? a : h )) $(( a < h ? h : a )) "${sorted[i]}"
+    done
+    _zhm_apply_changes
+}
 
 function _zhm_cmd_command_mode() {
     _zhm_prompt ":" ":" || return 0
     local input=$REPLY
     [[ -n $input ]] || return 0
-    local -a words
-    words=( ${(z)input} )
-    local name=${words[1]}
+    local name=${input%%[[:space:]]*}
+    local rest=${${input#$name}##[[:space:]]#}
     local -a args
-    args=( "${(@Q)words[2,-1]}" )
-    local rest=${input#*[[:space:]]}
-    [[ $rest == $input ]] && rest=""
+    args=( "${(@Q)${(z)rest}}" )
+    [[ -n $rest ]] || args=()
     if [[ $name == <-> ]]; then
         _zhm_count=$name
         _zhm_goto_line_impl 0
@@ -491,20 +532,7 @@ function _zhm_cmd_command_mode() {
     fi
     local op=${_ZHM_TYPABLE[$name]}
     case $op in
-        (sort|rsort)
-            _zhm_selection_fragments
-            local -a frags sorted
-            frags=( "${reply[@]}" )
-            if [[ $op == sort ]]; then sorted=( "${(@o)frags}" ); else sorted=( "${(@O)frags}" ); fi
-            _zhm_changes_reset
-            local -i i
-            for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
-                local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
-                _zhm_change $(( a < h ? a : h )) $(( a < h ? h : a )) "${sorted[i]}"
-            done
-            _zhm_apply_changes
-            ;;
-        (reverse) _zhm_count=1; _zhm_reorder_contents reverse ;;
+        (sort) _zhm_typable_sort "${args[@]}" ;;
         (pipe) _zhm_shell_impl "$rest" replace ;;
         (pipe-to) _zhm_shell_impl "$rest" ignore ;;
         (insert-output) _zhm_shell_impl "$rest" insert ;;
@@ -518,49 +546,104 @@ function _zhm_cmd_command_mode() {
             ;;
         (yank-join)
             _zhm_register_or_default
-            _zhm_yank_joined_impl "$REPLY" "${rest:-$'\n'}"
+            _zhm_yank_joined_impl "$REPLY" "${args[1]-$_ZHM_NL}"
             ;;
         (clipboard-yank) _zhm_yank_main_impl + ;;
-        (clipboard-yank-join) _zhm_yank_joined_impl + "${rest:-$'\n'}" ;;
+        (clipboard-yank-join) _zhm_yank_joined_impl + "${args[1]-$_ZHM_NL}" ;;
         (primary-clipboard-yank) _zhm_yank_main_impl '*' ;;
-        (primary-clipboard-yank-join) _zhm_yank_joined_impl '*' "${rest:-$'\n'}" ;;
+        (primary-clipboard-yank-join) _zhm_yank_joined_impl '*' "${args[1]-$_ZHM_NL}" ;;
         (clipboard-paste-after) _zhm_paste_from_register + after ;;
         (clipboard-paste-before) _zhm_paste_from_register + before ;;
         (clipboard-paste-replace) _zhm_replace_with_register + ;;
         (primary-clipboard-paste-after) _zhm_paste_from_register '*' after ;;
         (primary-clipboard-paste-before) _zhm_paste_from_register '*' before ;;
         (primary-clipboard-paste-replace) _zhm_replace_with_register '*' ;;
+        (show-clipboard-provider)
+            _zhm_clipboard_detect
+            _zhm_status "$_zhm_clip_tool"
+            ;;
+        (set-register)
+            if (( ${#args} != 2 )) || [[ ${#args[1]} != 1 ]]; then
+                _zhm_error "usage: set-register <register> <value>"
+                return 1
+            fi
+            _zhm_reg_write "${args[1]}" "${args[2]}"
+            ;;
         (clear-register)
-            if [[ -z ${args[1]} ]]; then
+            if (( ! ${#args} )); then
                 _zhm_regs=()
                 _zhm_status "All registers cleared"
-            else
+            elif [[ ${#args[1]} == 1 ]]; then
                 unset "_zhm_regs[${args[1]}]"
                 _zhm_status "Register ${args[1]} cleared"
+            else
+                _zhm_error "Invalid register ${args[1]}"
+                return 1
             fi
             ;;
-        (echo) _zhm_status "$rest" ;;
+        (echo) _zhm_status "${(j: :)args}" ;;
+        (noop) ;;
         (goto)
             [[ ${args[1]} == <-> ]] || { _zhm_error "invalid line number"; return 1 }
             _zhm_count=${args[1]}
             _zhm_goto_line_impl 0
             ;;
-        (earlier) _zhm_count=${args[1]:-1}; _zhm_cmd_earlier ;;
-        (later) _zhm_count=${args[1]:-1}; _zhm_cmd_later ;;
+        (earlier|later)
+            [[ -z ${args[1]} || ${args[1]} == <-> ]] || { _zhm_error "only step counts are supported"; return 1 }
+            _zhm_count=${args[1]:-1}
+            _zhm_cmd_$op
+            ;;
+        (character-info)
+            _zhm_primary_cursor
+            local -i pos=$REPLY
+            if (( pos >= ${#BUFFER} )); then
+                _zhm_status '"\n" (U+000A) Dec 10 Hex 0a'
+            else
+                local ch=${_zhm_chars[pos + 1]}
+                local -i code=$(( #ch ))
+                _zhm_status "$(printf '"%s" (U+%04X) Dec %d Hex %02x' "$ch" $code $code $code)"
+            fi
+            ;;
+        (cd)
+            if builtin cd -- "${args[1]:-$HOME}" 2>/dev/null; then
+                _zhm_status "Current working directory is now $PWD"
+            else
+                _zhm_error "Could not change directory to ${args[1]:-$HOME}"
+                return 1
+            fi
+            ;;
+        (pwd) _zhm_status "$PWD" ;;
+        (read)
+            [[ -n ${args[1]} ]] || { _zhm_error "usage: read <file>"; return 1 }
+            local file=${~args[1]}
+            [[ -r $file ]] || { _zhm_error "Could not read $file"; return 1 }
+            local content
+            content=$(<$file; print -n x)
+            reply=( "${content%x}" )
+            _zhm_paste_values cursor 1
+            ;;
+        (indent-style)
+            case ${args[1]} in
+                ('') ;;
+                (t|tabs) _zhm_indent_width=0 ;;
+                (<1-16>) _zhm_indent_width=${args[1]} ;;
+                (*) _zhm_error "indent style must be 't' or 1-16"; return 1 ;;
+            esac
+            if (( _zhm_indent_width == 0 )); then
+                _zhm_status "tabs"
+            else
+                _zhm_status "$_zhm_indent_width spaces"
+            fi
+            ;;
+        (redraw) zle redisplay ;;
         (write)
-            # There's no file to write: run the command line instead.
+            # There's no file to write, so run the command line instead.
             _zhm_cmd_accept_line
             ;;
         (quit)
             # Quitting abandons the command line.
-            BUFFER=""
-            _zhm_load_text
-            _zhm_set_single 0 0
             _zhm_clear_highlight
             zle .send-break
-            ;;
-        (set)
-            _zhm_status "Options are set with ZHM_* variables in your .zshrc"
             ;;
         (*)
             _zhm_error "no such command: '$name'"

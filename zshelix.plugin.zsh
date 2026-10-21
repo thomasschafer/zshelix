@@ -82,6 +82,87 @@ function _zhm_line_finish() {
 
 function _zhm_readkey_nop() {}
 
+# Key sequences that Helix ignores when unbound, but which zsh would otherwise
+# split into Escape followed by more keys: Alt with any printable key, and
+# common function and modified cursor keys.
+function _zhm_ignorable_keys() {
+    reply=()
+    local -i c
+    for (( c = 32; c < 127; c++ )); do
+        reply+=( $'\e'${(#)c} )
+    done
+    local seq
+    for seq in '[2~' '[3~' '[5~' '[6~' OP OQ OR OS '[11~' '[12~' '[13~' '[14~' \
+        '[15~' '[17~' '[18~' '[19~' '[20~' '[21~' '[23~' '[24~' '[Z' \
+        '[1;2A' '[1;2B' '[1;2C' '[1;2D' '[1;5A' '[1;5B' '[1;5C' '[1;5D' \
+        '[1;3A' '[1;3B' '[1;3C' '[1;3D' '[1;2H' '[1;2F' '[1;5H' '[1;5F' \
+        '[3;2~' '[3;3~' '[3;5~' '[H' '[F' OH OF '[1~' '[4~' '[7~' '[8~'; do
+        reply+=( $'\e'$seq )
+    done
+}
+
+# Bind the ignorable keys in keymap $1 to a no-op (or Alt keys to widget $2
+# if given), leaving any existing bindings (which may come from other
+# plugins) alone.
+function _zhm_bind_ignorable_keys() {
+    local keymap=$1 alt_widget=${2:-zhm_noop}
+    _zhm_ignorable_keys
+    local -a keys
+    keys=( "${reply[@]}" )
+    # Learn how bindkey prints each key by binding them in a scratch keymap.
+    bindkey -N zhm-scratch
+    local -i i
+    for (( i = 1; i <= ${#keys}; i++ )); do
+        _zhm_bindkey_escape "${keys[i]}"
+        bindkey -M zhm-scratch -- "$REPLY" zhm-scratch-$i
+    done
+    local -A bound
+    local line
+    for line in "${(@f)$(bindkey -M $keymap -L)}"; do
+        line=${line#bindkey -M $keymap }
+        [[ $line == -R* ]] && continue
+        bound[${line% *}]=1
+    done
+    for line in "${(@f)$(bindkey -M zhm-scratch -L)}"; do
+        line=${line#bindkey -M zhm-scratch }
+        local rep=${line% *} widget=${line##* }
+        (( ${+bound[$rep]} )) && continue
+        local key=${keys[${widget#zhm-scratch-}]}
+        _zhm_bindkey_escape "$key"
+        if [[ $key == $'\e'? ]]; then
+            bindkey -M $keymap -- "$REPLY" $alt_widget
+        else
+            bindkey -M $keymap -- "$REPLY" zhm_noop
+        fi
+    done
+    bindkey -D zhm-scratch
+}
+
+# In insert mode, Helix inserts the letter for unbound Ctrl keys. Do the same
+# for the Ctrl keys zsh would insert literally, leaving those with a shell
+# function (Ctrl-v, Ctrl-r, ...) alone.
+function _zhm_bind_ctrl_letters() {
+    local line
+    local -a chars
+    for line in "${(@f)$(bindkey -M viins -L)}"; do
+        [[ $line == *' 'self-insert ]] || continue
+        if [[ $line == 'bindkey -R -M viins "^'?'"-"^'?'" '* ]]; then
+            local first=${line[23]} last=${line[28]}
+            local -i from=$(( #first )) to=$(( #last )) c
+            for (( c = from; c <= to; c++ )); do chars+=( $c ); done
+        elif [[ $line == 'bindkey -M viins "^'?'" '* ]]; then
+            local single=${line[20]}
+            chars+=( $(( #single )) )
+        fi
+    done
+    local -i c
+    for c in "${chars[@]}"; do
+        # Only Ctrl with a letter (^A to ^Z).
+        (( c >= 65 && c <= 90 )) || continue
+        bindkey -M viins -- "^${(#)c}" zhm_insert_key_char
+    done
+}
+
 ### Initialisation ###
 
 function _zhm_initialise() {
@@ -128,6 +209,11 @@ function _zhm_initialise() {
     # Normal mode, then select mode as a copy of normal mode with overrides.
     bindkey -N zhm-normal
     bindkey -M zhm-normal -R ' '-'~' zhm_noop
+    _zhm_ignorable_keys
+    for seq in "${reply[@]}"; do
+        _zhm_bindkey_escape "$seq"
+        bindkey -M zhm-normal -- "$REPLY" zhm_noop
+    done
     for (( c = 0; c <= 9; c++ )); do
         bindkey -M zhm-normal -- "$c" zhm_count_$c
     done
@@ -147,6 +233,8 @@ function _zhm_initialise() {
     bindkey -M viins -R '\M-^@'-'\M-^?' zhm_insert_typed
     bindkey -M viins '^[[200~' zhm_paste_bracketed_input
     _zhm_define_insert_keymap
+    _zhm_bind_ignorable_keys viins zhm_insert_key_char
+    _zhm_bind_ctrl_letters
     # Ctrl-r searches history, as the shell user expects, unless something
     # else (fzf, atuin) has already claimed it.
     if [[ $(bindkey -M viins '^R') == *' 'redisplay ]]; then

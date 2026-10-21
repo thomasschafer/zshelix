@@ -1,9 +1,11 @@
 # Core data model: text, lines, characters, ranges and selections.
 #
-# The editable text is modelled on a Helix document. Helix documents end with a
-# newline, so the text we operate on is always `$BUFFER` plus a trailing "\n".
-# That virtual newline is never part of `$BUFFER`, but it gives the cursor
-# somewhere to sit at the end of the line, exactly as in Helix.
+# The editable text is modelled on a Helix document. A command line is treated
+# like a file that ends with a newline, so the text starts out as `$BUFFER`
+# plus a trailing "\n". That newline is never part of `$BUFFER`, but it gives
+# the cursor somewhere to sit at the end of the line, exactly as in Helix.
+# Edits can remove it (just as they can in Helix), in which case `$BUFFER` is
+# the whole text.
 #
 # All positions are 0-based character offsets into that text and, as in Helix,
 # refer to the gaps between characters. A range is a pair of positions (anchor,
@@ -51,10 +53,9 @@ function _zhm_load_text() {
     _zhm_set_text_raw "$BUFFER"$'\n'
 }
 
-# Set the text (which must end in a newline) and update all derived state.
+# Set the text and update all derived state.
 function _zhm_set_text_raw() {
     _zhm_text=$1
-    [[ $_zhm_text == *$'\n' ]] || _zhm_text+=$'\n'
     _zhm_len=${#_zhm_text}
     _zhm_chars=( "${(@s::)_zhm_text}" )
     local -a parts

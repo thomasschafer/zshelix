@@ -31,7 +31,6 @@ import harness  # noqa: E402
 
 TESTS = os.path.dirname(os.path.abspath(__file__))
 EXPECTED = os.path.join(TESTS, "expected.json")
-MARKERS = "«»¦‡"
 
 
 def unescape(s):
@@ -76,17 +75,6 @@ def case_key(case):
     _, text, keys, ext = case
     parts = [text, keys] if ext == "txt" else [text, keys, ext]
     return json.dumps(parts, ensure_ascii=False)
-
-
-def canonical(marked):
-    """Drop the final newline: zshelix always keeps the virtual newline that
-    Helix documents usually end with, even when Helix's text loses it."""
-    i = len(marked)
-    while i > 0 and marked[i - 1] in MARKERS:
-        i -= 1
-    if i > 0 and marked[i - 1] == "\n":
-        return marked[: i - 1] + marked[i:]
-    return marked
 
 
 def show(marked):
@@ -160,7 +148,7 @@ def main():
         for c, (mode, marked) in pool.map(zsh, cases):
             name, text, keys, _ = c
             want_mode, want = expected[case_key(c)]
-            if mode == want_mode and canonical(marked) == canonical(want):
+            if mode == want_mode and marked == want:
                 continue
             failures += 1
             print(f"FAIL {name}: {keys!r} on {text!r}")

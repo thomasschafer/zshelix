@@ -352,17 +352,31 @@ function _zhm_read_key() {
     REPLY=$key
 }
 
-# Read a key and convert it to a single character for commands that take a
-# character argument (f, t, r, ...). Returns 1 for keys that aren't
-# characters, such as Escape.
-function _zhm_read_char() {
-    _zhm_read_key
-    case $REPLY in
-        ($'\r'|$'\n') REPLY=$'\n' ;;
-        ($'\t') ;;
+# The character of key $1, ignoring Ctrl and Alt as Helix does for keys that
+# take a character argument (f, t, r, ...): Ctrl-o and Alt-o both give `o`.
+# Enter gives a newline. Returns 1 for keys without a character, such as
+# Escape and the cursor keys.
+function _zhm_key_char() {
+    local key=$1
+    case $key in
+        ($'\r') REPLY=$'\n' ;;
+        ($'\t') REPLY=$key ;;
+        ($'\e'?) REPLY=${key[2]} ;;
+        ($'\0') REPLY=' ' ;;
+        ([$'\x01'-$'\x1a'])
+            [[ $key == ($'\b'|$'\e') ]] && return 1
+            REPLY=${(#)$(( #key + 96 ))}
+            ;;
         ($'\e'*|[[:cntrl:]]) return 1 ;;
+        (*) REPLY=$key ;;
     esac
     return 0
+}
+
+# Read a key and convert it to a character with `_zhm_key_char`.
+function _zhm_read_char() {
+    _zhm_read_key
+    _zhm_key_char "$REPLY"
 }
 
 ### Info popups ###
@@ -521,12 +535,18 @@ function _zhm_regex_matches() {
     _zhm_chars_to_bytes $to; limit=$REPLY
     local ZPCRE_OP MATCH
     local -a match
+    local -i last_end=-1
     while (( off <= limit )) && pcre_match -b -n $off -- "$subject"; do
         bs=${ZPCRE_OP% *} be=${ZPCRE_OP#* }
         _zhm_bytes_to_chars "$subject" $bs; cs=$REPLY
         _zhm_bytes_to_chars "$subject" $be; ce=$REPLY
-        reply+=( $cs $ce )
-        (( first )) && return 0
+        # Like Rust's regex, an empty match directly after the previous
+        # match isn't reported.
+        if (( bs != be || bs != last_end )); then
+            reply+=( $cs $ce )
+            (( first )) && return 0
+        fi
+        last_end=$be
         if (( be == bs )); then
             (( ce >= to )) && break
             _zhm_char_bytes "${_zhm_chars[ce + 1]}"
@@ -546,7 +566,11 @@ function _zhm_shell_run() {
     local cmd=$1 input=$2
     local -i pipe=$3
     local -a shell
-    shell=( ${ZHM_SHELL:-sh -c} )
+    if (( ${#ZHM_SHELL} )); then
+        shell=( "${ZHM_SHELL[@]}" )
+    else
+        shell=( sh -c )
+    fi
     local errfile=${TMPDIR:-/tmp}/zshelix-$$-stderr
     local out
     if (( pipe )); then

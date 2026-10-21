@@ -1,0 +1,34 @@
+text: hello world\nfoo bar
+|tr a-z A-Z<ret>
+x|tr a-z A-Z<ret>
+%|tr a-z A-Z<ret>
+%sfoo|hello<ret>|tr a-z A-Z<ret>
+w|rev<ret>
+!echo hi<ret>
+w!echo hi<ret>
+<A-!>echo hi<ret>
+w<A-!>echo hi<ret>
+%s\w+<ret>!echo x<ret>
+%s\w+<ret><A-!>echo x<ret>
+%s\w+<ret>$grep o<ret>
+%s\w+<ret>$grep zz<ret>
+%s\w+<ret><A-|>cat<ret>
+|false<ret>
+|<ret>
+%s\w+<ret>:sort<ret>
+%s\w+<ret>:sort --reverse<ret>
+%s\w+<ret>:sort<ret>u
+%s\w+<ret>:pipe tr o 0<ret>
+%s\w+<ret>:insert-output echo -n Z<ret>
+%s\w+<ret>:append-output echo -n Z<ret>
+:2<ret>
+:goto 2<ret>
+:g 2<ret>
+%s\w+<ret>:sort -r<ret>
+%s\w+<ret>:sort -i<ret>
+:sort<ret>
+:echo hi<ret>
+%s\w+<ret>:yank-join<ret>p
+%s\w+<ret>:yank-join ,<ret>p
+:set-register a foo<ret>"ap
+:noop<ret>

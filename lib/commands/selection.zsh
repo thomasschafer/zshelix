@@ -308,9 +308,7 @@ function _zhm_find_char() {
     local -i forward=$1 inclusive=$2 extend=$3 count
     _zhm_count_or_1; count=$REPLY
     _zhm_read_char || return 0
-    local ch=$REPLY
-    _zhm_last_motion="_zhm_find_char_apply ${(q)ch} $count $forward $inclusive $extend"
-    _zhm_find_char_apply "$ch" $count $forward $inclusive $extend
+    _zhm_apply_motion "_zhm_find_char_apply ${(q)REPLY} $count $forward $inclusive $extend"
 }
 
 function _zhm_cmd_find_till_char() { _zhm_extend_flag; _zhm_find_char 1 0 $REPLY }
@@ -429,20 +427,31 @@ function _zhm_cmd_goto_last_modification() {
 function _zhm_t_next_paragraph() { _zhm_move_next_paragraph $1 $2 $3 $4 }
 function _zhm_t_prev_paragraph() { _zhm_move_prev_paragraph $1 $2 $3 $4 }
 
-function _zhm_cmd_goto_next_paragraph() {
-    local -i count
-    _zhm_count_or_1; count=$REPLY
+# Applies a paragraph motion ($1 is next or prev). Whether to extend is
+# decided when the motion is applied, so repeating it with `A-.` follows the
+# current mode as in Helix.
+function _zhm_paragraph_apply() {
+    local dir=$1
+    local -i count=$2
     _zhm_extend_flag
     _zhm_save_jump
-    _zhm_transform _zhm_t_next_paragraph $count $REPLY
+    _zhm_transform _zhm_t_${dir}_paragraph $count $REPLY
+}
+
+# Runs motion $1 (an eval-able command) and records it for `A-.`.
+function _zhm_apply_motion() {
+    _zhm_last_motion=$1
+    eval "$1"
+}
+
+function _zhm_cmd_goto_next_paragraph() {
+    _zhm_count_or_1
+    _zhm_apply_motion "_zhm_paragraph_apply next $REPLY"
 }
 
 function _zhm_cmd_goto_prev_paragraph() {
-    local -i count
-    _zhm_count_or_1; count=$REPLY
-    _zhm_extend_flag
-    _zhm_save_jump
-    _zhm_transform _zhm_t_prev_paragraph $count $REPLY
+    _zhm_count_or_1
+    _zhm_apply_motion "_zhm_paragraph_apply prev $REPLY"
 }
 
 ### Modes ###
@@ -886,15 +895,20 @@ function _zhm_t_textobject_pair() {
 
 function _zhm_textobject_cmd() {
     local kind=$1 object=$2 ch=$3
-    local -i count
-    _zhm_count_or_1; count=$REPLY
+    [[ $object == *pair && $ch == [[:alnum:]] ]] && return 0
+    _zhm_count_or_1
+    _zhm_apply_motion "_zhm_textobject_apply $kind $object ${(q)ch} $REPLY"
+}
+
+function _zhm_textobject_apply() {
+    local kind=$1 object=$2 ch=$3
+    local -i count=$4
     case $object in
         (word) _zhm_transform _zhm_t_textobject_word $kind 0 ;;
         (WORD) _zhm_transform _zhm_t_textobject_word $kind 1 ;;
         (paragraph) _zhm_transform _zhm_t_textobject_paragraph $kind $count ;;
         (closest) _zhm_transform _zhm_t_textobject_pair $kind closest surround $count ;;
         (pair|next_pair|prev_pair)
-            [[ $ch == [[:alnum:]] ]] && return 0
             local find_type=surround
             [[ $object == next_pair ]] && find_type=next
             [[ $object == prev_pair ]] && find_type=prev

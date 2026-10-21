@@ -19,6 +19,30 @@
 "NOR",
 "«four spaces\n¦‡»"
 ],
+"[\"    four\\n        eight\\n  two\\n\", \"A<C-j>x<esc>\"]": [
+"NOR",
+"    four\n    x«\n¦‡»        eight\n  two\n"
+],
+"[\"    four\\n        eight\\n  two\\n\", \"jA<C-j>x<esc>\"]": [
+"NOR",
+"    four\n        eight\n        x«\n¦‡»  two\n"
+],
+"[\"    four\\n        eight\\n  two\\n\", \"jjox<esc>\"]": [
+"NOR",
+"    four\n        eight\n  two\nx«\n¦‡»"
+],
+"[\"    four\\n        eight\\n  two\\n\", \"jox<esc>\"]": [
+"NOR",
+"    four\n        eight\n        x«\n¦‡»  two\n"
+],
+"[\"    four\\n        eight\\n  two\\n\", \"o<esc>\"]": [
+"NOR",
+"    four\n«\n¦‡»        eight\n  two\n"
+],
+"[\"    four\\n        eight\\n  two\\n\", \"ox<esc>\"]": [
+"NOR",
+"    four\n    x«\n¦‡»        eight\n  two\n"
+],
 "[\"    indented\\n    more\\nnone\\n\", \"A<esc>\"]": [
 "NOR",
 "    indented«\n¦‡»    more\nnone\n"
@@ -91,6 +115,22 @@
 "NOR",
 "«    ¦‡»leading spaces\n"
 ],
+"[\"  leading and trailing  \\n\\tTabbed\\tline\\n\", \"do<C-w><esc>\"]": [
+"NOR",
+" leading and «\n¦‡»\tTabbed\tline\n"
+],
+"[\"  leading and trailing  \\n\\tTabbed\\tline\\n\", \"jo<esc>\"]": [
+"NOR",
+"  leading and trailing  \n\tTabbed\tline\n«\n¦‡»"
+],
+"[\"  leading and trailing  \\n\\tTabbed\\tline\\n\", \"jox<esc>\"]": [
+"NOR",
+"  leading and trailing  \n\tTabbed\tline\n    x«\n¦‡»"
+],
+"[\"  leading and trailing  \\n\\tTabbed\\tline\\n\", \"o<esc>\"]": [
+"NOR",
+"  leading and trailing  \n«\n¦‡»\tTabbed\tline\n"
+],
 "[\"  padded   \\n   x\\n\", \"%_\"]": [
 "NOR",
 "  «padded   \n   x¦‡»\n"
@@ -118,6 +158,238 @@
 "[\"# echo one\\n  # echo two\\necho three\\n\", \"xxx<space>c\", \"sh\"]": [
 "NOR",
 "# «# echo one\n#   # echo two\n# echo three\n¦‡»"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"%sa|b<ret>md(\"]": [
+"NOR",
+"(«a¦‡» «b¦» c) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"%sa|b<ret>ms*\"]": [
+"NOR",
+"((«*a*¦‡») («*b*¦» c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"%sa|b|c<ret>md(\"]": [
+"NOR",
+"((«a¦‡») («b¦» «c¦»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f)mm\"]": [
+"NOR",
+"(«(¦‡»a) (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f[[(\"]": [
+"NOR",
+"((a) (¦‡«b c»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f[](\"]": [
+"NOR",
+"«((a) (b c)) [¦‡»x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f[]{\"]": [
+"NOR",
+"((a) (b c)) [x [y]] {«\"q\" 'r'¦‡»}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f]mm\"]": [
+"NOR",
+"((a) (b c)) [x «[¦‡»y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fb2mi(\"]": [
+"NOR",
+"(«(a) (b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fb;mdm\"]": [
+"NOR",
+"((a) «b¦‡» c) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fb;mrm[\"]": [
+"NOR",
+"((a) [«b¦‡» c]) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fb]\\\"\"]": [
+"NOR",
+"((a) (b c)) [x [y]] {\"«q¦‡»\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fbma(\"]": [
+"NOR",
+"((a) «(b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fbmd(\"]": [
+"NOR",
+"«((a) b¦‡» c) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fbmi(\"]": [
+"NOR",
+"((a) («b c¦‡»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fbmr(]\"]": [
+"NOR",
+"«((a) [b¦‡» c]) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fc;2md(\"]": [
+"NOR",
+"(a) (b «c¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fc;3md(\"]": [
+"NOR",
+"((a) (b «c¦‡»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fc;md(\"]": [
+"NOR",
+"((a) b «c¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fcmi(\"]": [
+"NOR",
+"((a) («b c¦‡»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ffmm\"]": [
+"NOR",
+"((a) (b c)«)¦‡» [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fq2mim\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q¦‡»\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fq;mrm(\"]": [
+"NOR",
+"((a) (b c)) [x [y]] (\"«q¦‡»\" 'r')\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqma\\\"\"]": [
+"NOR",
+"((a) (b c)) [x [y]] {«\"q\"¦‡» 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqmd\\\"\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {q¦‡» 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqmdm\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q¦‡»\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqmi\\\"\"]": [
+"NOR",
+"((a) (b c)) [x [y]] {\"«q¦‡»\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqmim\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q¦‡»\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fqmr\\\"`\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {`q¦‡»` 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"frmam\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q\" 'r¦‡»'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"frmd'\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q\" r¦‡»}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"frmi'\"]": [
+"NOR",
+"((a) (b c)) [x [y]] {\"q\" '«r¦‡»'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"frmim\"]": [
+"NOR",
+"«((a) (b c)) [x [y]] {\"q\" 'r¦‡»'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fy2ma[\"]": [
+"NOR",
+"((a) (b c)) «[x [y]]¦‡» {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fy2md[\"]": [
+"NOR",
+"«((a) (b c)) x [y¦‡»] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fy2mi[\"]": [
+"NOR",
+"((a) (b c)) [«x [y]¦‡»] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fyma[\"]": [
+"NOR",
+"((a) (b c)) [x «[y]¦‡»] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fymd[\"]": [
+"NOR",
+"«((a) (b c)) [x y¦‡»] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fymi[\"]": [
+"NOR",
+"((a) (b c)) [x [«y¦‡»]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"fymm\"]": [
+"NOR",
+"«((a) (b c)) [x [y¦‡»]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f}[{\"]": [
+"NOR",
+"¦‡«((a) (b c)) [x [y]] {\"q\" 'r'}»\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"f}mm\"]": [
+"NOR",
+"((a) (b c)) [x [y]] «{¦‡»\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll2ma(\"]": [
+"NOR",
+"«((a) (b c))¦‡» [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll2mi(\"]": [
+"NOR",
+"(«(a) (b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll2mim\"]": [
+"NOR",
+"(«(a) (b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll3mi(\"]": [
+"NOR",
+"((«a¦‡») (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll;md(\"]": [
+"NOR",
+"(«a¦‡» (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll[(\"]": [
+"NOR",
+"((¦‡«a») (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"ll](\"]": [
+"NOR",
+"((a) («b c¦‡»)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"lllllll2mim\"]": [
+"NOR",
+"(«(a) (b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"lllllmam\"]": [
+"NOR",
+"«((a) (b c))¦‡» [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"lllllmim\"]": [
+"NOR",
+"(«(a) (b c)¦‡») [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"llma(\"]": [
+"NOR",
+"(«(a)¦‡» (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"llmam\"]": [
+"NOR",
+"(«(a)¦‡» (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"llmi(\"]": [
+"NOR",
+"((«a¦‡») (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"llmim\"]": [
+"NOR",
+"((«a¦‡») (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"lmm\"]": [
+"NOR",
+"((a«)¦‡» (b c)) [x [y]] {\"q\" 'r'}\n"
+],
+"[\"((a) (b c)) [x [y]] {\\\"q\\\" 'r'}\\n\", \"mm\"]": [
+"NOR",
+"((a) (b c)«)¦‡» [x [y]] {\"q\" 'r'}\n"
 ],
 "[\"123 abc -5 0x1f 0b101 007 1_000\\n\", \"5<C-a>\"]": [
 "NOR",
@@ -195,6 +467,30 @@
 "NOR",
 "\t«\t¦‡»Tabbed\n"
 ],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"gljk\"]": [
+"NOR",
+"\ton«e¦‡»\n\t\ttwo\nthree four five\n"
+],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"jj\"]": [
+"NOR",
+"\tone\n\t\ttwo\n«t¦‡»hree four five\n"
+],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"jjk\"]": [
+"NOR",
+"\tone\n«\t¦‡»\ttwo\nthree four five\n"
+],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"jlj\"]": [
+"NOR",
+"\tone\n\t\ttwo\nthre«e¦‡» four five\n"
+],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"llj\"]": [
+"NOR",
+"\tone\n\t«\t¦‡»two\nthree four five\n"
+],
+"[\"\\tone\\n\\t\\ttwo\\nthree four five\\n\", \"llljj\"]": [
+"NOR",
+"\tone\n\t\ttwo\nthree «f¦‡»our five\n"
+],
 "[\"a b c\\n\", \"e\"]": [
 "NOR",
 "a« b¦‡» c\n"
@@ -227,6 +523,126 @@
 "NOR",
 "a b «c¦‡»\n"
 ],
+"[\"a b c\\nd e f\\ng h i\\n\", \"<A-c><A-c><esc>\"]": [
+"NOR",
+"c« ¦‡»b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"[<A-.><esc>\"]": [
+"NOR",
+"¦‡«a» b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"a<A-c><esc>\"]": [
+"NOR",
+"«ac¦‡» b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"f<C-o>\"]": [
+"NOR",
+"«a¦‡» b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"i<C-a><esc>\"]": [
+"NOR",
+"a¦‡«a» b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"i<C-e>x<C-t><esc>\"]": [
+"NOR",
+"ext¦‡«a» b c\nd e f\ng h i\n"
+],
+"[\"a b c\\nd e f\\ng h i\\n\", \"r<C-x>\"]": [
+"NOR",
+"«x¦‡» b c\nd e f\ng h i\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"2j\"]": [
+"NOR",
+"a long first line\nshort\n«a¦‡» much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"5j\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n\nend\n«¦‡»"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"<C-d>\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n\nend\n«¦‡»"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"GVk\"]": [
+"NOR",
+"«a¦‡» long first line\nshort\na much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"eeej\"]": [
+"NOR",
+"a long first line\nshort«\n¦‡»a much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"eeejj\"]": [
+"NOR",
+"a long first line\nshort\na much longer th«i¦‡»rd line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"eeejjj\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n«\n¦‡»end\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"eeejjjj\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n\nend«\n¦‡»"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gl<C-u>\"]": [
+"NOR",
+"a long first lin«e¦‡»\nshort\na much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"glj\"]": [
+"NOR",
+"a long first line\nshort«\n¦‡»a much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gljj\"]": [
+"NOR",
+"a long first line\nshort\na much longer th«i¦‡»rd line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gljjj\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n«\n¦‡»end\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gljjjj\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line here\n\nend«\n¦‡»"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gljjk\"]": [
+"NOR",
+"a long first line\nshort«\n¦‡»a much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"gljk\"]": [
+"NOR",
+"a long first lin«e¦‡»\nshort\na much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"jjgl\"]": [
+"NOR",
+"a long first line\nshort\na much longer third line her«e¦‡»\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"jjglk\"]": [
+"NOR",
+"a long first line\nshort«\n¦‡»a much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"jjglkk\"]": [
+"NOR",
+"a long first line«\n¦‡»short\na much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"vgljj\"]": [
+"SEL",
+"«a long first line\nshort\na much longer thi¦‡»rd line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"vjj\"]": [
+"SEL",
+"«a long first line\nshort\na¦‡» much longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"vjjj\"]": [
+"SEL",
+"«a long first line\nshort\na much longer third line here\n\n¦‡»end\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"wwjj\"]": [
+"NOR",
+"a long first line\nshort\na much« ¦‡»longer third line here\n\nend\n"
+],
+"[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"wwjjk\"]": [
+"NOR",
+"a long first line\nshort«\n¦‡»a much longer third line here\n\nend\n"
+],
 "[\"a1 b22 c333\\naa1 b2 c3\\n\", \"%s\\\\d+<ret>&\"]": [
 "NOR",
 "a «1¦‡» b«22¦» c«333¦»\naa«1¦» b «2¦» c  «3¦»\n"
@@ -234,6 +650,74 @@
 "[\"a1 b22 c333\\naa1 b2 c3\\n\", \"%s\\\\w+<ret>&\"]": [
 "NOR",
 " «a1¦‡» «b22¦» «c333¦»\n«aa1¦»  «b2¦»   «c3¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>\"]": [
+"NOR",
+"«a¦‡»\n«bb¦»\n«ccc¦»\n«dddd¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>&\"]": [
+"NOR",
+"   «a¦‡»\n  «bb¦»\n «ccc¦»\n«dddd¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>((\"]": [
+"NOR",
+"«a¦»\n«bb¦»\n«ccc¦‡»\n«dddd¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>)\"]": [
+"NOR",
+"«a¦»\n«bb¦‡»\n«ccc¦»\n«dddd¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>,\"]": [
+"NOR",
+"«a¦‡»\nbb\nccc\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s><A-(>\"]": [
+"NOR",
+"«bb¦»\n«ccc¦»\n«dddd¦»\n«a¦‡»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s><A-)>\"]": [
+"NOR",
+"«dddd¦»\n«a¦‡»\n«bb¦»\n«ccc¦»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>Ax<esc>\"]": [
+"NOR",
+"ax«\n¦‡»bbx«\n¦»cccx«\n¦»ddddx«\n¦»"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>J\"]": [
+"NOR",
+"«a¦‡» «bb¦» «ccc¦» «dddd¦»"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>ix<esc>\"]": [
+"NOR",
+"x¦‡«a»\nx¦«bb»\nx¦«ccc»\nx¦«dddd»\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"CCC\"]": [
+"NOR",
+"«a¦»\n«b¦»b\n«c¦»cc\n«d¦‡»ddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"G<A-C>\"]": [
+"NOR",
+"«a¦‡»\nbb\nccc\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"GC\"]": [
+"NOR",
+"«a¦»\n«b¦‡»b\nccc\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"GllC\"]": [
+"NOR",
+"a\n«b¦»b\n«c¦‡»cc\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"lllC\"]": [
+"NOR",
+"a\nb«b¦»\nc«c¦‡»c\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"llllC\"]": [
+"NOR",
+"a\nbb«\n¦»cc«c¦‡»\ndddd\n"
+],
+"[\"a\\nbb\\nccc\\ndddd\\n\", \"xxxx<A-s>\"]": [
+"NOR",
+"«a¦‡»\n«bb¦»\n«ccc¦»\n«dddd¦»\n"
 ],
 "[\"alpha beta gamma\\n\", \"%s\\\\w+<ret>,yP\"]": [
 "NOR",
@@ -334,6 +818,134 @@
 "[\"alpha beta gamma\\n\", \"wy\\\"ap\"]": [
 "NOR",
 "«alpha ¦‡»beta gamma\n"
+],
+"[\"base\\n\", \"%sa<ret>cX<esc>u\"]": [
+"NOR",
+"b«a¦‡»se\n"
+],
+"[\"base\\n\", \"Afoo<esc>u\"]": [
+"NOR",
+"base«\n¦‡»"
+],
+"[\"base\\n\", \"U\"]": [
+"NOR",
+"«b¦‡»ase\n"
+],
+"[\"base\\n\", \"afoo<esc>uU\"]": [
+"NOR",
+"«bfoo¦‡»ase\n"
+],
+"[\"base\\n\", \"cX<esc>u\"]": [
+"NOR",
+"«b¦‡»ase\n"
+],
+"[\"base\\n\", \"cX<esc>uU\"]": [
+"NOR",
+"X«a¦‡»se\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>ic<esc>2<A-u>\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>ic<esc>2u\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>ic<esc>3u2U\"]": [
+"NOR",
+"ab¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>ic<esc>3uU\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>u\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uix<esc>\"]": [
+"NOR",
+"ax¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uix<esc>u\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uix<esc>uu\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uix<esc>uuU\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uu\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uuU\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uuUU\"]": [
+"NOR",
+"ab¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uuUUU\"]": [
+"NOR",
+"ab¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>ib<esc>uuu\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc><A-u>\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc><A-u><A-u>\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc><A-u><A-u><A-U>\"]": [
+"NOR",
+"a¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc><A-u><A-u><A-U><A-U>\"]": [
+"NOR",
+"b¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc><A-u><A-u><A-u>\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc>u\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ia<esc>uib<esc>uU\"]": [
+"NOR",
+"b¦‡«b»ase\n"
+],
+"[\"base\\n\", \"ifoo<C-j>bar<esc>u\"]": [
+"NOR",
+"¦‡«b»ase\n"
+],
+"[\"base\\n\", \"u\"]": [
+"NOR",
+"«b¦‡»ase\n"
+],
+"[\"base\\n\", \"wdldu\"]": [
+"NOR",
+"«base¦‡»\n"
+],
+"[\"base\\n\", \"xdU\"]": [
+"NOR",
+"«¦‡»"
+],
+"[\"base\\n\", \"xdu\"]": [
+"NOR",
+"«base\n¦‡»"
 ],
 "[\"echo one\\n  echo two\\n\\necho three\\n\", \"%<space>c\", \"sh\"]": [
 "NOR",
@@ -511,9 +1123,21 @@
 "NOR",
 "«¦‡»"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s$<ret>\"]": [
+"NOR",
+"foo bar baz«\n¦‡»qux foo quux«\n¦»foo«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s$<ret>ax<esc>\"]": [
+"NOR",
+"foo bar baz«\nx¦‡»qux foo quux«\nx¦»foo«\nx¦»\n"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s.<ret><A-_>\"]": [
 "NOR",
 "«foo bar baz¦‡»\n«qux foo quux¦»\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s.<ret>d\"]": [
+"NOR",
+"«\n¦‡»«\n¦»«\n¦»"
 ],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s<ret>\"]": [
 "NOR",
@@ -522,6 +1146,14 @@
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s[a-z]+<ret><A-)>\"]": [
 "NOR",
 "«foo¦» «foo¦‡» «bar¦»\n«baz¦» «qux¦» «foo¦»\n«quux¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s\\\\b<ret>\"]": [
+"NOR",
+"«f¦‡»oo« ¦»«b¦»ar« ¦»«b¦»az«\n¦»«q¦»ux« ¦»«f¦»oo« ¦»«q¦»uux«\n¦»«f¦»oo«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s\\\\n<ret>d\"]": [
+"NOR",
+"foo bar baz«q¦‡»ux foo quux«f¦»oo«¦»"
 ],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s\\\\w+<ret>\"]": [
 "NOR",
@@ -551,6 +1183,26 @@
 "NOR",
 "«foo¦‡» «bar¦» «baz¦»\n«qux¦» «foo¦» «quux¦»\n«foo¦»\n"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s\\\\w+<ret>_\"]": [
+"NOR",
+"«foo¦‡» «bar¦» «baz¦»\n«qux¦» «foo¦» «quux¦»\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s^<ret>\"]": [
+"NOR",
+"«f¦‡»oo bar baz\n«q¦»ux foo quux\n«f¦»oo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%s^<ret>ix<esc>\"]": [
+"NOR",
+"x¦‡«f»oo bar baz\nx¦«q»ux foo quux\nx¦«f»oo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sa<ret>\"]": [
+"NOR",
+"foo b«a¦‡»r b«a¦»z\nqux foo quux\nfoo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sa<ret>,\"]": [
+"NOR",
+"foo b«a¦‡»r baz\nqux foo quux\nfoo\n"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sba.<ret>\"]": [
 "NOR",
 "foo «bar¦‡» «baz¦»\nqux foo quux\nfoo\n"
@@ -575,6 +1227,10 @@
 "NOR",
 "foo bar baz\nqux «foo¦‡» quux\nfoo\n"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>)<A-,>\"]": [
+"NOR",
+"«foo¦» bar baz\nqux foo quux\n«foo¦‡»\n"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>)d\"]": [
 "NOR",
 "« ¦»bar baz\nqux « ¦‡»quux\n«\n¦»"
@@ -586,6 +1242,10 @@
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>;\"]": [
 "NOR",
 "fo«o¦‡» bar baz\nqux fo«o¦» quux\nfo«o¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>;w\"]": [
+"NOR",
+"fo«o ¦‡»bar baz\nqux fo«o ¦»quux\nfoo\n«¦»"
 ],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret><A-(>\"]": [
 "NOR",
@@ -599,6 +1259,10 @@
 "NOR",
 "foo bar baz\nqux «foo¦‡» quux\n«foo¦»\n"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret><A-,><A-,>\"]": [
+"NOR",
+"foo bar baz\nqux foo quux\n«foo¦‡»\n"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret><A-;>\"]": [
 "NOR",
 "¦‡«foo» bar baz\nqux ¦«foo» quux\n¦«foo»\n"
@@ -607,17 +1271,225 @@
 "NOR",
 "«f¦‡»oo bar baz\nqux «f¦»oo quux\n«f¦»oo\n"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret><A-C>\"]": [
+"NOR",
+"«foo¦‡» «bar¦» baz\n«qux¦» «foo¦» quux\n«foo¦»\n"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret><A-minus>\"]": [
 "NOR",
 "«foo bar baz\nqux foo quux\nfoo¦‡»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>>\"]": [
+"NOR",
+"\t«foo¦‡» bar baz\n\tqux «foo¦» quux\n\t«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>Ax<esc>\"]": [
+"NOR",
+"foo bar bazx«\n¦‡»qux foo quuxx«\n¦»foox«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>C\"]": [
+"NOR",
+"«foo¦» bar baz\n«qux¦‡» «foo¦» quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>Ix<esc>\"]": [
+"NOR",
+"x«f¦‡»oo bar baz\nx«q¦»ux foo quux\nx«f¦»oo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>J\"]": [
+"NOR",
+"«foo¦‡» bar baz qux «foo¦» quux «foo¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>Ox<esc>\"]": [
+"NOR",
+"x«\n¦‡»foo bar baz\nx«\n¦»qux foo quux\nx«\n¦»foo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>X\"]": [
+"NOR",
+"«foo bar baz\n¦‡»«qux foo quux\n¦»«foo\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a(<esc>\"]": [
+"NOR",
+"«foo(¦‡») bar baz\nqux «foo(¦») quux\n«foo(¦»)\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<C-j><esc>\"]": [
+"NOR",
+"«foo\n¦‡» bar baz\nqux «foo\n¦» quux\n«foo\n¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<C-u><esc>\"]": [
+"NOR",
+"« ¦‡»bar baz\n« ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<C-w><esc>\"]": [
+"NOR",
+"« ¦‡»bar baz\nqux « ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<backspace><backspace><esc>\"]": [
+"NOR",
+"«f¦‡» bar baz\nqux «f¦» quux\n«f¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<backspace><esc>\"]": [
+"NOR",
+"«fo¦‡» bar baz\nqux «fo¦» quux\n«fo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>a<del><esc>\"]": [
+"NOR",
+"«foo¦‡»bar baz\nqux «foo¦»quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>ax<esc>\"]": [
+"NOR",
+"«foox¦‡» bar baz\nqux «foox¦» quux\n«foox¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>b\"]": [
+"NOR",
+"¦‡«foo» bar baz\nqux ¦«foo» quux\n¦«foo»\n"
 ],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>cX<esc>\"]": [
 "NOR",
 "X« ¦‡»bar baz\nqux X« ¦»quux\nX«\n¦»"
 ],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>cx<esc>\"]": [
+"NOR",
+"x« ¦‡»bar baz\nqux x« ¦»quux\nx«\n¦»"
+],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>d\"]": [
 "NOR",
 "« ¦‡»bar baz\nqux « ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>dU\"]": [
+"NOR",
+"« ¦‡»bar baz\nqux « ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>dpu\"]": [
+"NOR",
+"« ¦‡»bar baz\nqux « ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>dux\"]": [
+"NOR",
+"«foo bar baz\n¦‡»«qux foo quux\n¦»«foo\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>e\"]": [
+"NOR",
+"foo« bar¦‡» baz\nqux foo« quux¦»\nfoo\n«¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>fa\"]": [
+"NOR",
+"fo«o ba¦‡»r baz\nqux «foo¦» quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>gh\"]": [
+"NOR",
+"«f¦‡»oo bar baz\n«q¦»ux foo quux\n«f¦»oo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>gl\"]": [
+"NOR",
+"foo bar ba«z¦‡»\nqux foo quu«x¦»\nfo«o¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<A-d><esc>\"]": [
+"NOR",
+"« ¦‡»bar baz\nqux « ¦»quux\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<C-j><esc>\"]": [
+"NOR",
+"\n¦‡«foo» bar baz\nqux\n¦«foo» quux\n\n¦«foo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<C-k><esc>\"]": [
+"NOR",
+"«\n¦‡»qux «\n¦»«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<C-w><esc>\"]": [
+"NOR",
+"¦‡«foo» bar baz\n¦«foo» ¦«foo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<backspace><esc>\"]": [
+"NOR",
+"¦‡«foo» bar baz\nqux¦«foo» quux¦«foo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i<del><esc>\"]": [
+"NOR",
+"¦‡«oo» bar baz\nqux ¦«oo» quux\n¦«oo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>i\\\"<esc>\"]": [
+"NOR",
+"\"¦‡«foo» bar baz\nqux \"¦«foo» quux\n\"¦«foo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>ix<esc>\"]": [
+"NOR",
+"x¦‡«foo» bar baz\nqux x¦«foo» quux\nx¦«foo»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>j\"]": [
+"NOR",
+"foo bar baz\nqu«x¦‡» foo quux\nfoo«\n¦»«¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>k\"]": [
+"NOR",
+"fo«o¦‡» ba«r¦» baz\nqu«x¦» foo quux\nfoo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>maw\"]": [
+"NOR",
+"«foo ¦‡»bar baz\nqux «foo ¦»quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>miw\"]": [
+"NOR",
+"«foo¦‡» bar baz\nqux «foo¦» quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>ms(\"]": [
+"NOR",
+"«(foo)¦‡» bar baz\nqux «(foo)¦» quux\n«(foo)¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>o<esc>\"]": [
+"NOR",
+"foo bar baz\n«\n¦‡»qux foo quux\n«\n¦»foo\n«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>ox<esc>\"]": [
+"NOR",
+"foo bar baz\nx«\n¦‡»qux foo quux\nx«\n¦»foo\nx«\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>rz\"]": [
+"NOR",
+"«zzz¦‡» bar baz\nqux «zzz¦» quux\n«zzz¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>tx\"]": [
+"NOR",
+"fo«o bar baz\nqu¦‡»x fo«o quu¦»x\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>u\"]": [
+"NOR",
+"«foo¦‡» bar baz\nqux «foo¦» quux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>vfu\"]": [
+"SEL",
+"«foo bar baz\nqu¦‡»x «foo qu¦»ux\n«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>w\"]": [
+"NOR",
+"fo«o ¦‡»bar baz\nqux fo«o ¦»quux\nfoo\n«¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>wd\"]": [
+"NOR",
+"fo«b¦‡»ar baz\nqux fo«q¦»uux\nfoo\n«¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>x\"]": [
+"NOR",
+"«foo bar baz\n¦‡»«qux foo quux\n¦»«foo\n¦»"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>y,P\"]": [
+"NOR",
+"«foo¦‡»foo bar baz\nqux foo quux\nfoo\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>y<A-,>p\"]": [
+"NOR",
+"foo bar baz\nqux foo«foo¦‡» quux\nfoo«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>yp\"]": [
+"NOR",
+"foo«foo¦‡» bar baz\nqux foo«foo¦» quux\nfoo«foo¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sfoo<ret>~\"]": [
+"NOR",
+"«FOO¦‡» bar baz\nqux «FOO¦» quux\n«FOO¦»\n"
+],
+"[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%sz*<ret>\"]": [
+"NOR",
+"«f¦‡»«o¦»«o¦»« ¦»«b¦»«a¦»«r¦»« ¦»«b¦»«a¦»«z¦»\n«q¦»«u¦»«x¦»« ¦»«f¦»«o¦»«o¦»« ¦»«q¦»«u¦»«u¦»«x¦»«\n¦»«f¦»«o¦»«o¦»«\n¦»"
 ],
 "[\"foo bar baz\\nqux foo quux\\nfoo\\n\", \"%y%p\"]": [
 "NOR",
@@ -1131,6 +2003,30 @@
 "NOR",
 "foo(«bar¦‡», \"baz qux\") [x] {y z} <a> 'q' `b`\n"
 ],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"i<space><esc>O<esc>\"]": [
+"NOR",
+"«\n¦‡» foo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n"
+],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"jA<C-j>x<esc>\"]": [
+"NOR",
+"foo(bar, baz) [x] {y}\n  indented line\n  x«\n¦‡»\nlast line here\n"
+],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"jO<esc>\"]": [
+"NOR",
+"foo(bar, baz) [x] {y}\n«\n¦‡»  indented line\n\nlast line here\n"
+],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"jo<esc>\"]": [
+"NOR",
+"foo(bar, baz) [x] {y}\n  indented line\n«\n¦‡»\nlast line here\n"
+],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"jox<esc>\"]": [
+"NOR",
+"foo(bar, baz) [x] {y}\n  indented line\n  x«\n¦‡»\nlast line here\n"
+],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"t<C-o>\"]": [
+"NOR",
+"«fo¦‡»o(bar, baz) [x] {y}\n  indented line\n\nlast line here\n"
+],
 "[\"foo.bar(baz)  qux_quux 123 -- end\\n\", \"2e\"]": [
 "NOR",
 "foo«.¦‡»bar(baz)  qux_quux 123 -- end\n"
@@ -1470,6 +2366,22 @@
 "[\"hello world foo\\n\", \"~\"]": [
 "NOR",
 "«H¦‡»ello world foo\n"
+],
+"[\"hello world foo\\nbar baz qux\\n\", \"maw<A-.>\"]": [
+"NOR",
+"hello« ¦‡»world foo\nbar baz qux\n"
+],
+"[\"hello world foo\\nbar baz qux\\n\", \"mi(<A-.>\"]": [
+"NOR",
+"«h¦‡»ello world foo\nbar baz qux\n"
+],
+"[\"hello world foo\\nbar baz qux\\n\", \"miw<A-.>\"]": [
+"NOR",
+"«hello¦‡» world foo\nbar baz qux\n"
+],
+"[\"hello world foo\\nbar baz qux\\n\", \"wmiw<A-.>\"]": [
+"NOR",
+"hello« ¦‡»world foo\nbar baz qux\n"
 ],
 "[\"hello world\\n\", \"A()<esc>\"]": [
 "NOR",
@@ -1827,6 +2739,254 @@
 "NOR",
 "hello world\nfoo bar ba«z¦‡»\n  indented line\n\nlast\n"
 ],
+"[\"hello world\\nfoo bar\\n\", \"!echo hi<ret>\"]": [
+"NOR",
+"«hi¦‡»hello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>!echo x<ret>\"]": [
+"NOR",
+"«x¦‡»hello «x¦»world\n«x¦»foo «x¦»bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>$grep o<ret>\"]": [
+"NOR",
+"«hello¦‡» «world¦»\n«foo¦» bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>$grep zz<ret>\"]": [
+"NOR",
+"«hello¦‡» «world¦»\n«foo¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:append-output echo -n Z<ret>\"]": [
+"NOR",
+"hello«Z¦‡» world«Z¦»\nfoo«Z¦» bar«Z¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:insert-output echo -n Z<ret>\"]": [
+"NOR",
+"«Z¦‡»hello «Z¦»world\n«Z¦»foo «Z¦»bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:pipe tr o 0<ret>\"]": [
+"NOR",
+"«hell0¦‡» «w0rld¦»\n«f00¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:sort --reverse<ret>\"]": [
+"NOR",
+"«world¦‡» «hello¦»\n«foo¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:sort -i<ret>\"]": [
+"NOR",
+"«bar¦‡» «foo¦»\n«hello¦» «world¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:sort -r<ret>\"]": [
+"NOR",
+"«world¦‡» «hello¦»\n«foo¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:sort<ret>\"]": [
+"NOR",
+"«bar¦‡» «foo¦»\n«hello¦» «world¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:sort<ret>u\"]": [
+"NOR",
+"«hello¦‡» «world¦»\n«foo¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:yank-join ,<ret>p\"]": [
+"NOR",
+"hello«hello,world,foo,bar¦‡» world«hello,world,foo,bar¦»\nfoo«hello,world,foo,bar¦» bar«hello,world,foo,bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:yank-join<ret>p\"]": [
+"NOR",
+"hello«hello\nworld\nfoo\nbar¦‡» world«hello\nworld\nfoo\nbar¦»\nfoo«hello\nworld\nfoo\nbar¦» bar«hello\nworld\nfoo\nbar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret><A-!>echo x<ret>\"]": [
+"NOR",
+"hello«x¦‡» world«x¦»\nfoo«x¦» bar«x¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret><A-|>cat<ret>\"]": [
+"NOR",
+"«hello¦‡» «world¦»\n«foo¦» «bar¦»\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%sfoo|hello<ret>|tr a-z A-Z<ret>\"]": [
+"NOR",
+"«HELLO¦‡» world\n«FOO¦» bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"%|tr a-z A-Z<ret>\"]": [
+"NOR",
+"«HELLO WORLD\nFOO BAR\n¦‡»"
+],
+"[\"hello world\\nfoo bar\\n\", \":2<ret>\"]": [
+"NOR",
+"hello world\n«f¦‡»oo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":echo hi<ret>\"]": [
+"NOR",
+"«h¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":g 2<ret>\"]": [
+"NOR",
+"hello world\n«f¦‡»oo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":goto 2<ret>\"]": [
+"NOR",
+"hello world\n«f¦‡»oo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":noop<ret>\"]": [
+"NOR",
+"«h¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":set-register a foo<ret>\\\"ap\"]": [
+"NOR",
+"h«foo¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \":sort<ret>\"]": [
+"NOR",
+"«h¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"<A-!>echo hi<ret>\"]": [
+"NOR",
+"h«hi¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"w!echo hi<ret>\"]": [
+"NOR",
+"«hi¦‡»hello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"w<A-!>echo hi<ret>\"]": [
+"NOR",
+"hello «hi¦‡»world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"w|rev<ret>\"]": [
+"NOR",
+"« olleh¦‡»world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"x|tr a-z A-Z<ret>\"]": [
+"NOR",
+"«HELLO WORLD\n¦‡»foo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"|<ret>\"]": [
+"NOR",
+"«h¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"|false<ret>\"]": [
+"NOR",
+"«h¦‡»ello world\nfoo bar\n"
+],
+"[\"hello world\\nfoo bar\\n\", \"|tr a-z A-Z<ret>\"]": [
+"NOR",
+"«H¦‡»ello world\nfoo bar\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"%<A-`>\"]": [
+"NOR",
+"«HÉLLO WÖRLD\n日本語 テキスト\nOK\n¦‡»"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"%`\"]": [
+"NOR",
+"«héllo wörld\n日本語 テキスト\nok\n¦‡»"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"%~\"]": [
+"NOR",
+"«HÉLLO WÖRLD\n日本語 テキスト\nOK\n¦‡»"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"b\"]": [
+"NOR",
+"¦‡«h»éllo wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"d\"]": [
+"NOR",
+"«é¦‡»llo wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"e\"]": [
+"NOR",
+"«héllo¦‡» wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"ix<esc>\"]": [
+"NOR",
+"x¦‡«h»éllo wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jd\"]": [
+"NOR",
+"héllo wörld\n«本¦‡»語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jl\"]": [
+"NOR",
+"héllo wörld\n日«本¦‡»語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jld\"]": [
+"NOR",
+"héllo wörld\n日«語¦‡» テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jlix<esc>\"]": [
+"NOR",
+"héllo wörld\n日x¦‡«本»語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jll\"]": [
+"NOR",
+"héllo wörld\n日本«語¦‡» テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jllk\"]": [
+"NOR",
+"héll«o¦‡» wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jlmiw\"]": [
+"NOR",
+"héllo wörld\n«日本語¦‡» テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jlrx\"]": [
+"NOR",
+"héllo wörld\n日«x¦‡»語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jmiw\"]": [
+"NOR",
+"héllo wörld\n«日本語¦‡» テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"jw\"]": [
+"NOR",
+"héllo wörld\n«日本語 ¦‡»テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"lj\"]": [
+"NOR",
+"héllo wörld\n«日¦‡»本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"lllix<esc>\"]": [
+"NOR",
+"hélx¦‡«l»o wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"lllj\"]": [
+"NOR",
+"héllo wörld\n日«本¦‡»語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"lv~\"]": [
+"NOR",
+"h«É¦‡»llo wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"miw\"]": [
+"NOR",
+"«héllo¦‡» wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"w\"]": [
+"NOR",
+"«héllo ¦‡»wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"ww\"]": [
+"NOR",
+"héllo «wörld¦‡»\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"www\"]": [
+"NOR",
+"héllo wörld\n«日本語 ¦‡»テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"wwwb\"]": [
+"NOR",
+"héllo wörld\n¦‡«日本語 »テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"w~\"]": [
+"NOR",
+"«HÉLLO ¦‡»wörld\n日本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"xd\"]": [
+"NOR",
+"«日¦‡»本語 テキスト\nok\n"
+],
+"[\"héllo wörld\\n日本語 テキスト\\nok\\n\", \"~\"]": [
+"NOR",
+"«H¦‡»éllo wörld\n日本語 テキスト\nok\n"
+],
 "[\"line one\\nline two\\n\", \"A<C-k><C-k><esc>\"]": [
 "NOR",
 "line one«\n¦‡»"
@@ -1978,6 +3138,26 @@
 "[\"one two three four five six\\n\", \"wifoo<esc>ww.\"]": [
 "NOR",
 "fooone foo¦‡«two »three four five six\n"
+],
+"[\"one\\n\\ntwo three\\n\\n\\nfour\\n\", \"2]p<A-.>\"]": [
+"NOR",
+"one\n\ntwo three\n\n\n«four\n¦‡»"
+],
+"[\"one\\n\\ntwo three\\n\\n\\nfour\\n\", \"[{I<esc><A-.>\"]": [
+"NOR",
+"¦‡«o»ne\n\ntwo three\n\n\nfour\n"
+],
+"[\"one\\n\\ntwo three\\n\\n\\nfour\\n\", \"]p2<A-.>\"]": [
+"NOR",
+"one\n\ntwo three\n\n\n«four\n¦‡»"
+],
+"[\"one\\n\\ntwo three\\n\\n\\nfour\\n\", \"]p<A-.>\"]": [
+"NOR",
+"one\n\n«two three\n\n\n¦‡»four\n"
+],
+"[\"one\\n\\ntwo three\\n\\n\\nfour\\n\", \"v]p<esc><A-.>\"]": [
+"NOR",
+"one\n\n«two three\n\n\n¦‡»four\n"
 ],
 "[\"one\\ntwo\\n\\nthree four\\n\", \"b\"]": [
 "NOR",
@@ -2355,6 +3535,10 @@
 "NOR",
 "the¦‡« quick brown »fox jumps over the lazy dog\n"
 ],
+"[\"x\\n\", \"<del>\"]": [
+"NOR",
+"«x¦‡»\n"
+],
 "[\"x\\n\", \"b\"]": [
 "NOR",
 "¦‡«x»\n"
@@ -2367,6 +3551,18 @@
 "NOR",
 "«x¦‡»\n"
 ],
+"[\"x\\n\", \"jaxy<esc>\"]": [
+"NOR",
+"x\nxy«¦‡»"
+],
+"[\"x\\n\", \"jaxy<esc>d\"]": [
+"NOR",
+"x\nxy«¦‡»"
+],
+"[\"x\\n\", \"jay<C-u><esc>\"]": [
+"NOR",
+"x\n«¦‡»"
+],
 "[\"x\\n\", \"l\"]": [
 "NOR",
 "x«\n¦‡»"
@@ -2374,5 +3570,9 @@
 "[\"x\\n\", \"w\"]": [
 "NOR",
 "x\n«¦‡»"
+],
+"[\"x\\n\", \"~l~u\"]": [
+"NOR",
+"X«\n¦‡»"
 ]
 }

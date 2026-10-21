@@ -13,6 +13,7 @@ typeset -gA _zhm_km_info
 # Top-level keys bound in each zle keymap, to avoid duplicates.
 typeset -gA _zhm_km_top
 
+typeset -gr _ZHM_NL=$'\n'
 typeset -gr _ZHM_SEP=$'\x1f' _ZHM_MSEP=$'\x1e'
 
 # Raw key sequences (there may be several) for a key in Helix notation.
@@ -236,8 +237,8 @@ function _zhm_menu_widget() {
                 if ! _zhm_lookup $mode "$p$_ZHM_SEP$key"; then
                     local fallback=${_zhm_km_fallback[$lookup_mode$_ZHM_MSEP$p]}
                     zle -M ""
-                    if [[ -n $fallback && $key != $'\e'* && $key != [[:cntrl:]] ]]; then
-                        _zhm_run $fallback "$key"
+                    if [[ -n $fallback ]] && _zhm_key_char "$key"; then
+                        _zhm_run $fallback "$REPLY"
                     else
                         _zhm_count=0 _zhm_register=""
                         _zhm_render

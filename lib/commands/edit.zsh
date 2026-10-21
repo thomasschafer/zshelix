@@ -37,13 +37,25 @@ function _zhm_cmd_append_mode() {
     _zhm_ensure_invariants
 }
 
-# Leading whitespace of line $1.
-function _zhm_line_indent() {
-    local -i line=$1 s e
-    _zhm_line_start $line; s=$REPLY
-    _zhm_line_end $line; e=$REPLY
-    local content=${_zhm_text:$s:$(( e - s ))}
-    REPLY=${(M)content##[[:blank:]]#}
+# Indentation for a new line after line $1. Without syntax information Helix
+# measures the line's leading whitespace in whole indent units
+# (`indent_level_for_line`) and repeats the indent unit that many times.
+function _zhm_newline_indent() {
+    local -i line=$1 pos width=0 iw
+    _zhm_line_start $line; pos=$REPLY
+    while (( pos < _zhm_len )); do
+        case ${_zhm_chars[pos + 1]} in
+            ($'\t') (( width += ZHM_TAB_WIDTH - width % ZHM_TAB_WIDTH )) ;;
+            (' ') (( width++ )) ;;
+            (*) break ;;
+        esac
+        (( pos++ ))
+    done
+    (( iw = _zhm_indent_width > 0 ? _zhm_indent_width : ZHM_TAB_WIDTH ))
+    _zhm_indent_unit
+    local unit=$REPLY out="" k
+    for (( k = 0; k < width / iw; k++ )); do out+=$unit; done
+    REPLY=$out
 }
 
 # `insert_with_indent`: $1 is "start" or "end".
@@ -61,9 +73,9 @@ function _zhm_insert_with_indent() {
         _zhm_line_start $line; ls=$REPLY
         _zhm_line_end $line
         if (( REPLY == ls )); then
-            # Empty line: indent like the previous line.
-            local indent=""
-            (( line > 0 )) && { _zhm_line_indent $(( line - 1 )); indent=$REPLY }
+            # Empty line: indent it.
+            _zhm_newline_indent $line
+            local indent=$REPLY
             ranges+=( $(( offs + ls + ${#indent} )) $(( offs + ls + ${#indent} )) )
             (( offs += ${#indent} ))
             _zhm_change $ls $ls "$indent"
@@ -114,9 +126,7 @@ function _zhm_open() {
             _zhm_line_end $above; pos_line_end=$REPLY
             pos_width=1
         fi
-        # Without syntax information Helix copies the indentation of the line
-        # the new line is opened from.
-        _zhm_line_indent $curr
+        _zhm_newline_indent $curr
         local indent=$REPLY text=""
         if [[ $dir == above ]] && (( next == 0 )); then
             text=$indent$'\n'
@@ -225,14 +235,8 @@ function _zhm_cmd_change_selection_noyank() { _zhm_delete_selection_impl change 
 ### Replace ###
 
 function _zhm_cmd_replace() {
-    _zhm_read_key
-    local key=$REPLY ch
-    case $key in
-        ($'\r'|$'\n') ch=$'\n' ;;
-        ($'\t') ch=$'\t' ;;
-        ($'\e'*|[[:cntrl:]]) return 0 ;;
-        (*) ch=$key ;;
-    esac
+    _zhm_read_char || return 0
+    local ch=$REPLY
     _zhm_changes_reset
     local -i i
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
@@ -727,17 +731,17 @@ function _zhm_cmd_reverse_selection_contents() { _zhm_reorder_contents reverse }
 
 function _zhm_cmd_surround_add() {
     _zhm_show_info "Surround selections with" "( or )  Parentheses" "{ or }  Curly braces" "< or >  Angled brackets" "[ or ]  Square brackets" "        ... or any character"
-    _zhm_read_key
+    _zhm_read_char
+    local -i ok=$?
     zle -M ""
-    local key=$REPLY open close
-    case $key in
-        ($'\r'|$'\n') open=$'\n' close=$'\n' ;;
-        ($'\e'*|[[:cntrl:]]) return 0 ;;
-        (*)
-            _zhm_get_pair "$key"
-            open=$REPLY close=$REPLY2
-            ;;
-    esac
+    (( ok == 0 )) || return 0
+    local open close
+    if [[ $REPLY == $'\n' ]]; then
+        open=$'\n' close=$'\n'
+    else
+        _zhm_get_pair "$REPLY"
+        open=$REPLY close=$REPLY2
+    fi
     _zhm_changes_reset
     local -a ranges
     local -i i offs=0
@@ -782,10 +786,10 @@ function _zhm_get_surround_pos() {
 function _zhm_surround_read_target() {
     _zhm_read_key
     zle -M ""
-    case $REPLY in
-        (m) REPLY="" ;;
-        ($'\e'*|[[:cntrl:]]) return 1 ;;
-    esac
+    # Enter isn't a character here, unlike for `r` and `ms`.
+    [[ $REPLY == $'\r' ]] && return 1
+    _zhm_key_char "$REPLY" || return 1
+    [[ $REPLY == m ]] && REPLY=""
     return 0
 }
 
@@ -827,8 +831,9 @@ function _zhm_cmd_surround_replace() {
     zle -M ""
     local key=$REPLY
     _zhm_selection_restore "$saved"
-    case $key in ($'\e'*|[[:cntrl:]]) return 0 ;; esac
-    _zhm_get_pair "$key"
+    [[ $key == $'\r' ]] && return 0
+    _zhm_key_char "$key" || return 0
+    _zhm_get_pair "$REPLY"
     local open=$REPLY close=$REPLY2
     local -a sorted
     local -i i
@@ -1323,6 +1328,13 @@ function _zhm_cmd_insert_typed() {
     done
 }
 
+# Helix inserts the character of unbound Ctrl and Alt keys in insert mode
+# (Ctrl-a and Alt-a both insert `a`).
+function _zhm_cmd_insert_key_char() {
+    _zhm_key_char "$KEYS" || return 0
+    _zhm_insert_char "$REPLY"
+}
+
 function _zhm_cmd_insert_tab() {
     _zhm_changes_reset
     local -i i
@@ -1336,7 +1348,7 @@ function _zhm_cmd_insert_tab() {
             _zhm_line_of $cursor
             _zhm_line_start $REPLY
             local -i offset=$(( (cursor - REPLY) % _zhm_indent_width ))
-            indent=${(l:$(( _zhm_indent_width - offset ))::\ :)}
+            indent=${(l:$(( _zhm_indent_width - offset )):: :)}
         fi
         _zhm_change $cursor $cursor "$indent"
     done
@@ -1364,7 +1376,7 @@ function _zhm_cmd_insert_newline() {
             (( first_trailing < last )) && first_trailing=$last
             (( first_trailing > pos )) && first_trailing=$pos
             last=$pos
-            _zhm_line_indent $line
+            _zhm_newline_indent $line
             local indent=$REPLY
             local on_pair=0
             if (( ZHM_AUTO_PAIRS )) && _zhm_auto_pair "$prev" && [[ $REPLY == "$prev" && $REPLY2 == "$curr" ]]; then

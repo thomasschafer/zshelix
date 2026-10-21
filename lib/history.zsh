@@ -35,9 +35,6 @@ function _zhm_history_begin_change() {
 function _zhm_history_commit() {
     (( _zhm_dirty )) || return 0
     _zhm_dirty=0
-    if [[ $_zhm_text == "${_zhm_h_text[_zhm_h_cur]}" ]]; then
-        return 0
-    fi
     local -i new=$(( ${#_zhm_h_text} + 1 ))
     _zhm_selection_serialize
     _zhm_h_text[new]=$_zhm_text

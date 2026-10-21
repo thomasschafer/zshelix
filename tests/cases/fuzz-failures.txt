@@ -1,0 +1,50 @@
+# Minimised cases found by tests/fuzz.py.
+text: a b c\nd e f\ng h i\n
+a<A-c><esc>
+<A-c><A-c><esc>
+[<A-.><esc>
+i<C-a><esc>
+i<C-e>x<C-t><esc>
+f<C-o>
+r<C-x>
+text: x\n
+~l~u
+<del>
+jay<C-u><esc>
+jay<C-u><esc>
+jaxy<esc>
+jaxy<esc>d
+text: foo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n
+i<space><esc>O<esc>
+t<C-o>
+jo<esc>
+jox<esc>
+jO<esc>
+jA<C-j>x<esc>
+text:   leading and trailing  \n\tTabbed\tline\n
+do<C-w><esc>
+o<esc>
+jo<esc>
+jox<esc>
+text:     four\n        eight\n  two\n
+o<esc>
+ox<esc>
+jox<esc>
+jjox<esc>
+A<C-j>x<esc>
+jA<C-j>x<esc>
+text: one\n\ntwo three\n\n\nfour\n
+[{I<esc><A-.>
+text: hello world foo\nbar baz qux\n
+maw<A-.>
+text: one\n\ntwo three\n\n\nfour\n
+[{I<esc><A-.>
+]p<A-.>
+]p2<A-.>
+v]p<esc><A-.>
+2]p<A-.>
+text: hello world foo\nbar baz qux\n
+maw<A-.>
+miw<A-.>
+mi(<A-.>
+wmiw<A-.>
