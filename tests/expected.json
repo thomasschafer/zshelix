@@ -551,6 +551,18 @@
 "NOR",
 "«x¦‡» b c\nd e f\ng h i\n"
 ],
+"[\"a b cc d ee\\n\", \"gwaa\"]": [
+"NOR",
+"a b «cc¦‡» d ee\n"
+],
+"[\"a b cc d ee\\n\", \"gwab\"]": [
+"NOR",
+"a b cc d «ee¦‡»\n"
+],
+"[\"a b cc d ee\\n\", \"llgwaa\"]": [
+"NOR",
+"a b «cc¦‡» d ee\n"
+],
 "[\"a long first line\\nshort\\na much longer third line here\\n\\nend\\n\", \"2j\"]": [
 "NOR",
 "a long first line\nshort\n«a¦‡» much longer third line here\n\nend\n"
@@ -762,6 +774,70 @@
 "[\"ab\\n\", \"v<paste:XY>\"]": [
 "NOR",
 "XY«a¦‡»b\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwa<esc>\"]": [
+"NOR",
+"«a¦‡»lpha beta gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwaa\"]": [
+"NOR",
+"alpha «beta¦‡» gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwaayp\"]": [
+"NOR",
+"alpha beta«beta¦‡» gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwab\"]": [
+"NOR",
+"alpha beta «gamma¦‡» delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwac\"]": [
+"NOR",
+"alpha beta gamma «delta¦‡»\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwad\"]": [
+"NOR",
+"alpha beta gamma delta\n«epsilon¦‡» zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwaf\"]": [
+"NOR",
+"alpha beta gamma delta\nepsilon zeta «eta¦‡» theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"gwag\"]": [
+"NOR",
+"alpha beta gamma delta\nepsilon zeta eta «theta¦‡»\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"jgwaa\"]": [
+"NOR",
+"alpha beta gamma delta\nepsilon «zeta¦‡» eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"jgwab\"]": [
+"NOR",
+"alpha beta gamma «delta¦‡»\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wvgwab\"]": [
+"SEL",
+"¦‡«alpha »beta gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wwgwaa\"]": [
+"NOR",
+"alpha beta «gamma¦‡» delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wwgwab\"]": [
+"NOR",
+"alpha «beta¦‡» gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wwgwac\"]": [
+"NOR",
+"alpha beta gamma «delta¦‡»\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wwvgwab\"]": [
+"SEL",
+"alpha ¦‡«beta »gamma delta\nepsilon zeta eta theta\n"
+],
+"[\"alpha beta gamma delta\\nepsilon zeta eta theta\\n\", \"wwvgwac\"]": [
+"SEL",
+"alpha «beta gamma delta¦‡»\nepsilon zeta eta theta\n"
 ],
 "[\"alpha beta gamma\\n\", \"%s\\\\w+<ret>,yP\"]": [
 "NOR",
@@ -2835,11 +2911,11 @@
 "NOR",
 "«hello¦‡» «world¦»\n«foo¦» «bar¦»\n"
 ],
-"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:append-output echo -n Z<ret>\"]": [
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:append-output printf Z<ret>\"]": [
 "NOR",
 "hello«Z¦‡» world«Z¦»\nfoo«Z¦» bar«Z¦»\n"
 ],
-"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:insert-output echo -n Z<ret>\"]": [
+"[\"hello world\\nfoo bar\\n\", \"%s\\\\w+<ret>:insert-output printf Z<ret>\"]": [
 "NOR",
 "«Z¦‡»hello «Z¦»world\n«Z¦»foo «Z¦»bar\n"
 ],

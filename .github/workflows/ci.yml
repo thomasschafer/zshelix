@@ -59,4 +59,4 @@ jobs:
         run: zsh -c 'zmodload zsh/pcre && echo "zsh $ZSH_VERSION with PCRE"'
 
       - name: Run tests
-        run: python3 tests/run.py -j 4
+        run: ZHM_TEST_ESC_DELAY=0.2 python3 tests/run.py -j 3 && ZHM_TEST_ESC_DELAY=0.2 python3 tests/shell.py

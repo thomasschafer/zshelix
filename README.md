@@ -92,6 +92,8 @@ Set these before sourcing zshelix.
 | `ZHM_HISTORY_PREV_WIDGET` | `up-history` | Widget used to go to the previous history entry (for example `up-line-or-beginning-search`). |
 | `ZHM_HISTORY_NEXT_WIDGET` | `down-history` | Widget used to go to the next history entry. |
 | `ZHM_ACCEPT_LINE_WIDGET` | `accept-line` | Widget used to run the command line. |
+| `ZHM_JUMP_LABEL_ALPHABET` | `abcdefghijklmnopqrstuvwxyz` | Characters used for `gw` jump labels. |
+| `ZHM_STYLE_JUMP_LABEL` | `fg=red,bold` | Highlight for `gw` jump labels. |
 | `ZHM_COMMENT_TOKEN` | `#` | Token used by the comment commands. |
 | `ZHM_SHELL` | `(sh -c)` | Command (as an array) used to run shell commands. |
 | `ZHM_KEYTIMEOUT` | `1` | Value for zsh's `KEYTIMEOUT`, in hundredths of a second. A short timeout makes Escape responsive. |
@@ -249,6 +251,7 @@ Every command is also a zle widget called `zhm_<command>`, so `bindkey` works to
 | `k` | Move up | `move_line_up` |
 | `j` | Move down | `move_line_down` |
 | `.` | Goto last modification | `goto_last_modification` |
+| `w` | Jump to a two-character label | `goto_word` |
 
 #### Match (`m`)
 
@@ -364,6 +367,7 @@ Select mode has all of the normal mode bindings, except for these, which extend 
 | `e` | Extend to last line | `extend_to_last_line` |
 | `k` | Extend up | `extend_line_up` |
 | `j` | Extend down | `extend_line_down` |
+| `w` | Extend to a two-character label | `extend_to_word` |
 
 ### Insert mode
 

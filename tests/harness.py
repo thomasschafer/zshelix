@@ -105,6 +105,15 @@ class Pty:
                 return
             self.output += data
 
+    def read_until_quiet(self, quiet, limit=2.0):
+        """Read until there's been no output for `quiet` seconds."""
+        end = time.time() + limit
+        while time.time() < end:
+            before = len(self.output)
+            self.read(quiet)
+            if len(self.output) == before:
+                return
+
     def send(self, data, wait):
         os.write(self.fd, data)
         self.read(wait)
@@ -121,10 +130,19 @@ class Pty:
         os.close(self.fd)
 
 
+# Extra time to wait after Escape, so it isn't merged with the next key into
+# an Alt combination. Slow machines (like CI runners) may need more.
+ESC_DELAY = float(os.environ.get("ZHM_TEST_ESC_DELAY", "0.06"))
+
+
 def send_keys(p, events, delay):
     for ev in events:
-        # Escape needs a gap so it isn't merged with the next key as Alt.
-        p.send(ev, 0.06 if ev == b"\x1b" else delay)
+        os.write(p.fd, ev)
+        # Wait until the program has finished responding to the key, so that
+        # keys never queue up (which can change how they're parsed).
+        p.read_until_quiet(delay)
+        if ev == b"\x1b":
+            p.read(ESC_DELAY)
 
 
 def wait_for(path, p, timeout=5.0):

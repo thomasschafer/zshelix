@@ -1,0 +1,21 @@
+text: alpha beta gamma delta\nepsilon zeta eta theta
+gwaa
+gwab
+gwac
+gwad
+gwaf
+gwag
+gwa<esc>
+wwgwaa
+wwgwab
+wwgwac
+jgwaa
+jgwab
+wvgwab
+wwvgwab
+wwvgwac
+gwaayp
+text: a b cc d ee
+gwaa
+gwab
+llgwaa

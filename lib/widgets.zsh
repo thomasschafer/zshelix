@@ -10,6 +10,10 @@ typeset -g _zhm_register=""
 typeset -g _zhm_buf=""
 typeset -gi _zhm_cur=0
 
+# Set while a command temporarily changes the buffer for display (jump
+# labels), so the change isn't mistaken for an edit.
+typeset -gi _zhm_suspend_sync=0
+
 # Our entries in region_highlight.
 typeset -ga _zhm_hl
 

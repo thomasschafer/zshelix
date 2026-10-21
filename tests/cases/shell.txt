@@ -19,8 +19,8 @@ w<A-!>echo hi<ret>
 %s\w+<ret>:sort --reverse<ret>
 %s\w+<ret>:sort<ret>u
 %s\w+<ret>:pipe tr o 0<ret>
-%s\w+<ret>:insert-output echo -n Z<ret>
-%s\w+<ret>:append-output echo -n Z<ret>
+%s\w+<ret>:insert-output printf Z<ret>
+%s\w+<ret>:append-output printf Z<ret>
 :2<ret>
 :goto 2<ret>
 :g 2<ret>

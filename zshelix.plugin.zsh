@@ -44,7 +44,7 @@ typeset -g ZHM_CURSOR_BAR=$'\e[4 q'
 () {
     local file
     for file in core history registers movement widgets docs keymap \
-        commands/selection commands/edit commands/misc; do
+        commands/selection commands/edit commands/misc commands/jump; do
         source "$_ZHM_ROOT/lib/$file.zsh"
     done
 }
@@ -68,6 +68,7 @@ function _zhm_line_init() {
 function _zhm_line_pre_redraw() {
     emulate -L zsh
     setopt extended_glob typeset_silent
+    (( _zhm_suspend_sync )) && return 0
     if [[ $BUFFER != "$_zhm_buf" ]] || (( CURSOR != _zhm_cur )); then
         _zhm_sync
         _zhm_render

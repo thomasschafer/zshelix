@@ -363,6 +363,7 @@ function _zhm_define_normal_keymap() {
     zhm_bind $m 'g k' move_line_up
     zhm_bind $m 'g j' move_line_down
     zhm_bind $m 'g .' goto_last_modification
+    zhm_bind $m 'g w' goto_word
     zhm_bind $m ':' command_mode
 
     zhm_bind $m 'i' insert_mode
@@ -538,6 +539,7 @@ function _zhm_define_select_keymap() {
     zhm_bind $m 'g e' extend_to_last_line
     zhm_bind $m 'g k' extend_line_up
     zhm_bind $m 'g j' extend_line_down
+    zhm_bind $m 'g w' extend_to_word
 }
 
 function _zhm_define_insert_keymap() {
