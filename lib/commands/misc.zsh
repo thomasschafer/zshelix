@@ -48,11 +48,20 @@ function _zhm_search_impl() {
 # First match starting at or after position $1, searching the whole text so
 # that anchors see the surrounding context. Sets reply to the start and end.
 function _zhm_search_forward_from() {
-    local -i start=$1 bs be
-    _zhm_chars_to_bytes $start
+    local -i start=$1 bs be off
+    _zhm_chars_to_bytes $start; off=$REPLY
     local ZPCRE_OP MATCH
     local -a match
-    pcre_match -b -n $REPLY -- "$_zhm_text" || return 1
+    if (( start >= _zhm_len )); then
+        _zhm_regex_matches_empty || return 1
+        reply=( $_zhm_len $_zhm_len )
+        return 0
+    fi
+    if ! pcre_match -b -n $off -- "$_zhm_text"; then
+        _zhm_regex_matches_empty || return 1
+        reply=( $_zhm_len $_zhm_len )
+        return 0
+    fi
     bs=${ZPCRE_OP% *} be=${ZPCRE_OP#* }
     local -i cs ce
     _zhm_bytes_to_chars "$_zhm_text" $bs; cs=$REPLY

@@ -48,3 +48,13 @@ maw<A-.>
 miw<A-.>
 mi(<A-.>
 wmiw<A-.>
+text: for f in *.txt; do\n  echo "$f"\ndone\n
+o<S-tab>
+text: foo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n
+[2j
+text: for f in *.txt; do\n  echo "$f"\ndone\n
+A<C-j><space><esc>
+text: x\n
+?$<ret>
+text: a\n
+]<space>a<A-d>(

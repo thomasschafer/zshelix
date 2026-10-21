@@ -651,6 +651,10 @@
 "NOR",
 " «a1¦‡» «b22¦» «c333¦»\n«aa1¦»  «b2¦»   «c3¦»\n"
 ],
+"[\"a\\n\", \"]<space>a<A-d>(\"]": [
+"INS",
+"«a(¦‡»)\n"
+],
 "[\"a\\nbb\\nccc\\ndddd\\n\", \"%<A-s>\"]": [
 "NOR",
 "«a¦‡»\n«bb¦»\n«ccc¦»\n«dddd¦»\n"
@@ -2003,6 +2007,10 @@
 "NOR",
 "foo(«bar¦‡», \"baz qux\") [x] {y z} <a> 'q' `b`\n"
 ],
+"[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"[2j\"]": [
+"NOR",
+"«f¦‡»oo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n"
+],
 "[\"foo(bar, baz) [x] {y}\\n  indented line\\n\\nlast line here\\n\", \"i<space><esc>O<esc>\"]": [
 "NOR",
 "«\n¦‡» foo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n"
@@ -2126,6 +2134,14 @@
 "[\"foo.bar(baz)  qux_quux 123 -- end\\n\", \"wwwwwwwwwwww\"]": [
 "NOR",
 "foo.bar(baz)  qux_quux 123 -- end\n«¦‡»"
+],
+"[\"for f in *.txt; do\\n  echo \\\"$f\\\"\\ndone\\n\", \"A<C-j><space><esc>\"]": [
+"NOR",
+"for f in *.txt; do\n«\n¦‡»  echo \"$f\"\ndone\n"
+],
+"[\"for f in *.txt; do\\n  echo \\\"$f\\\"\\ndone\\n\", \"o<S-tab>\"]": [
+"INS",
+"for f in *.txt; do\n«\n¦‡»  echo \"$f\"\ndone\n"
 ],
 "[\"hello world foo\\n\", \"%<A-`>\"]": [
 "NOR",
@@ -3538,6 +3554,10 @@
 "[\"x\\n\", \"<del>\"]": [
 "NOR",
 "«x¦‡»\n"
+],
+"[\"x\\n\", \"?$<ret>\"]": [
+"NOR",
+"x\n«¦‡»"
 ],
 "[\"x\\n\", \"b\"]": [
 "NOR",

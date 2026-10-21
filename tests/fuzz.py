@@ -19,6 +19,12 @@ import harness  # noqa: E402
 from run import show  # noqa: E402
 
 TEXTS = [
+    "git commit -m \"fix: thing\" && git push origin main\n",
+    "for f in *.txt; do\n  echo \"$f\"\ndone\n",
+    "a\n",
+    "\n",
+    "  \n",
+    "word\n\n\nword\n",
     "hello world foo\nbar baz qux\n",
     "foo(bar, baz) [x] {y}\n  indented line\n\nlast line here\n",
     "a b c\nd e f\ng h i\n",
@@ -45,8 +51,20 @@ SIMPLE = (
 ).split()
 
 
+REGEXES = ["o", "a|e", "\\w+", "[a-z]+", "\\s", "^", "$", "x*", "\\b", "(", "b.", "l+"]
+
+
 def token(rng):
     r = rng.random()
+    if r < 0.08:
+        cmd = rng.choice(["s", "S", "K", "<A-K>", "/", "?"])
+        return cmd + rng.choice(REGEXES) + "<ret>"
+    if r < 0.11:
+        return rng.choice(['"a', '"b', '"_']) + rng.choice(["y", "p", "P", "R", "d", "c<esc>"])
+    if r < 0.13:
+        return rng.choice(["|tr a-z A-Z<ret>", "!echo x<ret>", "<A-!>echo y<ret>", "$grep o<ret>", ":sort<ret>"])
+    if r < 0.15:
+        return rng.choice(["Q", "q", "."])
     if r < 0.55:
         return rng.choice(SIMPLE)
     if r < 0.7:
@@ -56,7 +74,8 @@ def token(rng):
         return "mr" + rng.choice("()[]\"'m") + rng.choice("([{\"'")
     insert = rng.choice(["i", "a", "I", "A", "o", "O", "c", "<A-c>"])
     typed = "".join(
-        rng.choice(["x", "y", " ", "(", '"', "<backspace>", "<C-w>", "<C-j>", "<del>", "<C-k>", "<C-u>", "<A-d>"])
+        rng.choice(["x", "y", " ", "(", '"', "<backspace>", "<C-w>", "<C-j>", "<del>", "<C-k>", "<C-u>",
+                    "<A-d>", "<left>", "<right>", "<up>", "<down>", "<home>", "<end>", ")", "[", "'", "<S-tab>"])
         for _ in range(rng.randint(0, 4))
     )
     return insert + typed + "<esc>"
@@ -64,10 +83,8 @@ def token(rng):
 
 def make_case(rng):
     text = rng.choice(TEXTS)
-    keys = "".join(token(rng) for _ in range(rng.randint(2, 7)))
-    # Don't end in select mode with a pending count, which would apply to
-    # the extraction keys.
-    return text, keys + "<esc>"
+    tokens = [token(rng) for _ in range(rng.randint(2, 7))]
+    return text, tokens
 
 
 def split_keys(keys):
@@ -99,9 +116,11 @@ def mismatch(text, keys):
     return not (want[0] == got[0] and want[1] == got[1])
 
 
-def minimize(text, keys):
-    """Greedily drop keys while Helix and zsh still disagree."""
-    tokens = split_keys(keys)
+def minimize(text, tokens):
+    """Greedily drop tokens while Helix and zsh still disagree. Tokens are
+    whole commands (including any prompt input), so that removing part of a
+    command can't turn prompt input into commands."""
+    tokens = list(tokens)
     changed = True
     while changed:
         changed = False
@@ -130,7 +149,8 @@ def main():
     print(f"seed {seed}")
 
     def run(case):
-        text, keys = case
+        text, tokens = case
+        keys = "".join(tokens) + "<esc><esc>"
         try:
             want = harness.run_helix(text, keys)
         except Exception as e:  # noqa: BLE001
@@ -143,12 +163,13 @@ def main():
 
     failures = []
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
-        for (text, keys), want, got in pool.map(run, cases):
+        for (text, tokens), want, got in pool.map(run, cases):
             if want is None:
                 continue
             if want[0] == got[0] and want[1] == got[1]:
                 continue
-            failures.append((text, keys))
+            keys = "".join(tokens)
+            failures.append((text, tokens))
             print(f"FAIL {keys!r} on {text!r}")
             print(f"  helix ({want[0]}):\n    " + show(want[1]).replace("\n", "\n    "))
             print(f"  zsh   ({got[0]}):\n    " + show(got[1]).replace("\n", "\n    "))
@@ -156,13 +177,14 @@ def main():
         with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
             minimal = list(pool.map(lambda f: (f[0], minimize(*f)), failures))
         print("minimised:")
-        for text, keys in minimal:
-            print(f"  {keys!r} on {text!r}")
+        for text, tokens in minimal:
+            print(f"  {''.join(tokens)!r} on {text!r}")
         failures = minimal
     if failures:
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cases", "fuzz-failures.txt")
         with open(path, "a") as f:
-            for text, keys in failures:
+            for text, tokens in failures:
+                keys = "".join(tokens) + "<esc><esc>"
                 escaped = text.replace("\\", "\\\\").replace("\n", "\\n").replace("\t", "\\t")
                 f.write(f"text: {escaped}\n{keys}\n")
     print(f"{len(cases) - len(failures)}/{len(cases)} matched")

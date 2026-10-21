@@ -29,9 +29,11 @@ typeset -g _zhm_mode=insert
 
 # Position of the most recent edit, for `g.`.
 typeset -gi _zhm_last_edit=-1
-# End of a newly inserted indented line, if that is the only uncommitted
-# change (-1 otherwise).
-typeset -gi _zhm_indent_insert_end=-1
+# When all uncommitted changes compose to a single insertion (as when typing),
+# its start and text; _zhm_ins_from is -1 otherwise. Used to emulate Helix's
+# `try_restore_indent`, which looks at the composed changes.
+typeset -gi _zhm_ins_from=-1
+typeset -g _zhm_ins_text=""
 
 ### Errors ###
 
@@ -428,8 +430,14 @@ function _zhm_apply_changes() {
             return 2
         }
         (( from == to )) && [[ -z ${_zhm_cx[i]} ]] && continue
-        cf+=( $from ) ct+=( $to ) cx+=( "${_zhm_cx[i]}" )
         new+=${_zhm_text:$last:$(( from - last ))}${_zhm_cx[i]}
+        if (( ${#cf} && from == ct[-1] )); then
+            # Adjacent changes merge into one, as in a Helix ChangeSet.
+            ct[-1]=$to
+            cx[-1]+=${_zhm_cx[i]}
+        else
+            cf+=( $from ) ct+=( $to ) cx+=( "${_zhm_cx[i]}" )
+        fi
         last=$to
     done
     _zhm_cf=( "${cf[@]}" ) _zhm_ct=( "${ct[@]}" ) _zhm_cx=( "${cx[@]}" )
@@ -437,13 +445,7 @@ function _zhm_apply_changes() {
         return 1
     fi
     new+=${_zhm_text:$last}
-    # Track whether the only change since the last commit is the insertion
-    # of a new, indented line, for `_zhm_try_restore_indent`.
-    if (( ! _zhm_dirty && ${#_zhm_cf} == 1 && _zhm_cf[1] == _zhm_ct[1] )) && [[ ${_zhm_cx[1]} == $'\n'[[:blank:]]# ]]; then
-        _zhm_indent_insert_end=$(( _zhm_cf[1] + ${#_zhm_cx[1]} ))
-    else
-        _zhm_indent_insert_end=-1
-    fi
+    _zhm_compose_insert
     _zhm_history_begin_change
     local -a sa sh
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
@@ -458,6 +460,30 @@ function _zhm_apply_changes() {
     _zhm_store_text
     _zhm_changes_reset
     return 0
+}
+
+# Update the composed insertion (see _zhm_ins_from) with the pending changes.
+function _zhm_compose_insert() {
+    local -i from=${_zhm_cf[1]} to=${_zhm_ct[1]}
+    local text=${_zhm_cx[1]}
+    if (( ${#_zhm_cf} != 1 )); then
+        _zhm_ins_from=-1
+    elif (( ! _zhm_dirty )); then
+        if (( from == to )); then
+            _zhm_ins_from=$from _zhm_ins_text=$text
+        else
+            _zhm_ins_from=-1
+        fi
+    elif (( _zhm_ins_from >= 0 )); then
+        local -i end=$(( _zhm_ins_from + ${#_zhm_ins_text} ))
+        if (( from >= _zhm_ins_from && to <= end )); then
+            local -i rel_from=$(( from - _zhm_ins_from )) rel_to=$(( to - _zhm_ins_from ))
+            _zhm_ins_text=${_zhm_ins_text:0:$rel_from}$text${_zhm_ins_text:$rel_to}
+            [[ -n $_zhm_ins_text ]] || _zhm_ins_from=-1
+        else
+            _zhm_ins_from=-1
+        fi
+    fi
 }
 
 ### Indentation ###

@@ -521,25 +521,48 @@ function _zhm_char_bytes() {
     }
 }
 
+# Whether the compiled regex matches the empty string, used for matches at the
+# very end of the text, where zsh's pcre_match can't start a search.
+function _zhm_regex_matches_empty() {
+    local ZPCRE_OP MATCH
+    local -a match
+    pcre_match -b -- "" && [[ $ZPCRE_OP == "0 0" ]]
+}
+
 # All matches of the compiled regex within text [$1, $2): sets reply to a flat
 # list of start/end character positions. If $3 is set, stops after the first
 # match. As with Helix's `regex_input_at`, anchors and look-around see the
-# text before the range, but matches can't extend past its end.
+# whole text, but matches can't extend past the end of the range.
 function _zhm_regex_matches() {
     local -i from=$1 to=$2 first=${3:-0}
-    local subject=${_zhm_text:0:$to}
     reply=()
-    local -i off bs be cs ce
+    local -i off limit total bs be cs ce last_end=-1
     _zhm_chars_to_bytes $from; off=$REPLY
-    local -i limit
     _zhm_chars_to_bytes $to; limit=$REPLY
+    _zhm_chars_to_bytes $_zhm_len; total=$REPLY
+    local prefix=${_zhm_text:0:$to}
     local ZPCRE_OP MATCH
     local -a match
-    local -i last_end=-1
-    while (( off <= limit )) && pcre_match -b -n $off -- "$subject"; do
+    while (( off <= limit )); do
+        if (( off >= total )); then
+            if (( last_end != total )) && _zhm_regex_matches_empty; then
+                reply+=( $_zhm_len $_zhm_len )
+            fi
+            break
+        fi
+        pcre_match -b -n $off -- "$_zhm_text" || break
         bs=${ZPCRE_OP% *} be=${ZPCRE_OP#* }
-        _zhm_bytes_to_chars "$subject" $bs; cs=$REPLY
-        _zhm_bytes_to_chars "$subject" $be; ce=$REPLY
+        (( bs > limit )) && break
+        if (( be > limit )); then
+            # The match runs past the end of the range: match within it.
+            if (( off >= limit )); then
+                break
+            fi
+            pcre_match -b -n $off -- "$prefix" || break
+            bs=${ZPCRE_OP% *} be=${ZPCRE_OP#* }
+        fi
+        _zhm_bytes_to_chars "$_zhm_text" $bs; cs=$REPLY
+        _zhm_bytes_to_chars "$_zhm_text" $be; ce=$REPLY
         # Like Rust's regex, an empty match directly after the previous
         # match isn't reported.
         if (( bs != be || bs != last_end )); then

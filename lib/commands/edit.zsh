@@ -156,13 +156,14 @@ function _zhm_cmd_open_above() { _zhm_open above }
 # without typing anything on it (Helix's `try_restore_indent`). Only the
 # primary selection is considered, as in Helix.
 function _zhm_try_restore_indent() {
-    (( _zhm_dirty && _zhm_indent_insert_end >= 0 )) || return 0
+    (( _zhm_dirty && _zhm_ins_from >= 0 )) || return 0
+    [[ $_zhm_ins_text == $'\n'[[:blank:]]# ]] || return 0
     local -i pos line ls le
     _zhm_primary_cursor; pos=$REPLY
     _zhm_line_of $pos; line=$REPLY
     _zhm_line_start $line; ls=$REPLY
     _zhm_line_end $line; le=$REPLY
-    (( pos == _zhm_indent_insert_end && pos == le )) || return 0
+    (( pos == _zhm_ins_from + ${#_zhm_ins_text} && pos == le )) || return 0
     _zhm_changes_reset
     _zhm_change $ls $pos ""
     _zhm_apply_changes

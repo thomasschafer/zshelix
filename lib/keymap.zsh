@@ -234,6 +234,13 @@ function _zhm_menu_widget() {
                 _zhm_show_info "${entry#menu:}" "${reply[@]}"
                 _zhm_read_key
                 local key=$REPLY
+                # As in Helix, a digit the menu doesn't bind adds to the count
+                # while the menu stays open.
+                if [[ $key == [0-9] ]] && ! _zhm_lookup $mode "$p$_ZHM_SEP$key" \
+                    && [[ $key != 0 || $_zhm_count -gt 0 ]]; then
+                    _zhm_count_digit $key
+                    continue
+                fi
                 if ! _zhm_lookup $mode "$p$_ZHM_SEP$key"; then
                     local fallback=${_zhm_km_fallback[$lookup_mode$_ZHM_MSEP$p]}
                     zle -M ""
