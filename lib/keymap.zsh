@@ -13,8 +13,10 @@ typeset -gA _zhm_km_info
 # Top-level keys bound in each zle keymap, to avoid duplicates.
 typeset -gA _zhm_km_top
 
-typeset -gr _ZHM_NL=$'\n'
-typeset -gr _ZHM_SEP=$'\x1f' _ZHM_MSEP=$'\x1e'
+typeset -g _ZHM_NL=$'\n'
+# Set once the default keymaps exist (select mode is then a separate keymap).
+typeset -gi _zhm_keymaps_ready=0
+typeset -g _ZHM_SEP=$'\x1f' _ZHM_MSEP=$'\x1e'
 
 # Raw key sequences (there may be several) for a key in Helix notation.
 function _zhm_key_raw() {
@@ -114,21 +116,68 @@ function _zhm_expand_path() {
     reply=( "${paths[@]}" )
 }
 
-# Bind key path $2 (Helix notation) in mode $1 to command $3. Intermediate
-# keys must have been declared as menus with `zhm_menu`.
+# Bind key path $2 (Helix notation) in mode $1 to command $3. Keys before the
+# last one are menus; they're created if they don't exist yet. Normal mode
+# bindings also apply in select mode unless select mode overrides them.
 function zhm_bind() {
     local mode=$1 keys=$2 cmd=$3
     if (( ! ${+functions[_zhm_cmd_$cmd]} )); then
         _zhm_bug "zhm_bind: unknown command '$cmd'"
         return 1
     fi
+    _zhm_ensure_menus $mode "$keys" || return 1
     _zhm_expand_path "$keys" || return 1
     local p
     for p in "${reply[@]}"; do
         _zhm_km[$mode$_ZHM_MSEP$p]="cmd:$cmd"
         _zhm_bind_top $mode "$p" zhm_$cmd
+        if [[ $mode == normal ]] && (( _zhm_keymaps_ready )) && (( ! ${+_zhm_km[select$_ZHM_MSEP$p]} )); then
+            _zhm_bind_top select "$p" zhm_$cmd
+        fi
     done
     _zhm_add_info $mode "$keys" "${_ZHM_DOCS[$cmd]:-$cmd}"
+}
+
+# Remove the binding for key path $2 in mode $1.
+function zhm_unbind() {
+    local mode=$1 keys=$2
+    _zhm_expand_path "$keys" || return 1
+    local p keymap
+    _zhm_keymap_name $mode; keymap=$REPLY
+    for p in "${reply[@]}"; do
+        unset "_zhm_km[$mode$_ZHM_MSEP$p]"
+        [[ $p == *$_ZHM_SEP* ]] && continue
+        _zhm_bindkey_escape "$p"
+        if [[ $mode == insert ]]; then
+            bindkey -M viins -r -- "$REPLY"
+        else
+            bindkey -M $keymap -- "$REPLY" zhm_noop
+            if [[ $mode == normal ]] && (( ! ${+_zhm_km[select$_ZHM_MSEP$p]} )); then
+                bindkey -M zhm-select -- "$REPLY" zhm_noop
+            fi
+        fi
+    done
+    _zhm_add_info $mode "$keys" ""
+}
+
+# Create menus for the keys before the last one in path $2, if needed.
+function _zhm_ensure_menus() {
+    local mode=$1
+    local -a parts
+    parts=( ${(s: :)2} )
+    local -i i
+    local prefix p
+    for (( i = 1; i < ${#parts}; i++ )); do
+        prefix=${(j: :)parts[1,i]}
+        _zhm_expand_path "$prefix" || return 1
+        for p in "${reply[@]}"; do
+            if [[ ${_zhm_km[$mode$_ZHM_MSEP$p]} != menu:* ]] && \
+                ! { [[ $mode == select ]] && [[ ${_zhm_km[normal$_ZHM_MSEP$p]} == menu:* ]] }; then
+                zhm_menu $mode "$prefix" "$prefix"
+                break
+            fi
+        done
+    done
 }
 
 # Declare key path $2 in mode $1 as a menu titled $3, optionally with a
@@ -155,10 +204,21 @@ function _zhm_add_info() {
     _zhm_split_alternatives "$last"
     local display=${(j:, :)reply}
     _zhm_expand_path "$parent" || return 1
-    local p
+    local p entry=${(r:10:)display}
     for p in "${reply[@]}"; do
         local k=$mode$_ZHM_MSEP$p
-        _zhm_km_info[$k]+="${(r:10:)display} $desc"$'\n'
+        # Replace any existing entry for the same key; an empty description
+        # removes it.
+        local -a lines
+        lines=( "${(@f)${_zhm_km_info[$k]%$'\n'}}" )
+        lines=( "${(@)lines:#${(b)entry} *}" )
+        lines=( ${lines:#} )
+        [[ -n $desc ]] && lines+=( "$entry $desc" )
+        if (( ${#lines} )); then
+            _zhm_km_info[$k]=${(pj:\n:)lines}$'\n'
+        else
+            unset "_zhm_km_info[$k]"
+        fi
     done
 }
 
@@ -212,7 +272,7 @@ function _zhm_menu_info_lines() {
 # until a command is reached.
 function _zhm_menu_widget() {
     emulate -L zsh
-    setopt extended_glob
+    setopt extended_glob typeset_silent
     _zhm_sync
     _zhm_record_key "$KEYS"
     local p=$KEYS mode=$_zhm_mode

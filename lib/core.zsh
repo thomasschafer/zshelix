@@ -127,7 +127,7 @@ function _zhm_char() {
 ### Characters ###
 
 # Character categories, mirroring `helix_core::chars::CharCategory`.
-typeset -gri _ZHM_EOL=0 _ZHM_WS=1 _ZHM_WORD=2 _ZHM_PUNCT=3 _ZHM_UNKNOWN=4
+typeset -gi _ZHM_EOL=0 _ZHM_WS=1 _ZHM_WORD=2 _ZHM_PUNCT=3 _ZHM_UNKNOWN=4
 
 function _zhm_cat() {
     case $1 in

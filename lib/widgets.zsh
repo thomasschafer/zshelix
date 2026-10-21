@@ -33,9 +33,9 @@ typeset -g _zhm_last_motion=""
 # Private key sequences used when replaying keys with `zle -U`, so that a
 # standalone Escape can't be merged with the following key into an Alt
 # combination.
-typeset -gr _ZHM_KEY_ESC=$'\e[9999~'
-typeset -gr _ZHM_KEY_REPEAT_INSERT=$'\e[9998~'
-typeset -gr _ZHM_KEY_REPLAY_END=$'\e[9997~'
+typeset -g _ZHM_KEY_ESC=$'\e[9999~'
+typeset -g _ZHM_KEY_REPEAT_INSERT=$'\e[9998~'
+typeset -g _ZHM_KEY_REPLAY_END=$'\e[9997~'
 
 ### Messages ###
 
@@ -163,7 +163,7 @@ function _zhm_sync() {
 # Entry point for every zshelix command widget (named zhm_<command>).
 function _zhm_widget() {
     emulate -L zsh
-    setopt extended_glob
+    setopt extended_glob typeset_silent
     _zhm_sync
     _zhm_record_key "$KEYS"
     _zhm_run ${WIDGET#zhm_}

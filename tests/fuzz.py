@@ -71,7 +71,7 @@ def token(rng):
         cmd = rng.choice(["f", "t", "F", "T", "r", "mi", "ma", "ms", "md", "]", "["])
         return cmd + rng.choice(CHARS)
     if r < 0.75:
-        return "mr" + rng.choice("()[]\"'m") + rng.choice("([{\"'")
+        return "mr" + rng.choice("()[]\"'m") + rng.choice("([{\"'") + "<esc>"
     insert = rng.choice(["i", "a", "I", "A", "o", "O", "c", "<A-c>"])
     typed = "".join(
         rng.choice(["x", "y", " ", "(", '"', "<backspace>", "<C-w>", "<C-j>", "<del>", "<C-k>", "<C-u>",

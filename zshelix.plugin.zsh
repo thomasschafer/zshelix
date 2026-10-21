@@ -53,7 +53,7 @@ typeset -g ZHM_CURSOR_BAR=$'\e[4 q'
 
 function _zhm_line_init() {
     emulate -L zsh
-    setopt extended_glob
+    setopt extended_glob typeset_silent
     _zhm_load_text
     _zhm_detect_indent
     _zhm_history_reset
@@ -67,7 +67,7 @@ function _zhm_line_init() {
 
 function _zhm_line_pre_redraw() {
     emulate -L zsh
-    setopt extended_glob
+    setopt extended_glob typeset_silent
     if [[ $BUFFER != "$_zhm_buf" ]] || (( CURSOR != _zhm_cur )); then
         _zhm_sync
         _zhm_render
@@ -167,7 +167,7 @@ function _zhm_bind_ctrl_letters() {
 
 function _zhm_initialise() {
     emulate -L zsh
-    setopt extended_glob
+    setopt extended_glob typeset_silent
 
     if is-at-least 5.9; then
         typeset -g _zhm_memo="memo=zshelix"
@@ -226,6 +226,7 @@ function _zhm_initialise() {
     bindkey -M viins -- "$REPLY" zhm_replay_end
     bindkey -N zhm-select zhm-normal
     _zhm_define_select_keymap
+    _zhm_keymaps_ready=1
 
     # Insert mode uses viins, so that bindings other plugins add there (fzf,
     # atuin, ...) keep working.
