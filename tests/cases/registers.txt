@@ -1,0 +1,26 @@
+text: alpha beta gamma
+wy"ap
+"ayw"ap
+"ayw"aP
+"ayw"byw"ap
+"ayw"byw"bp
+w"ay"ap
+"ayww"aR
+"_d
+"_dp
+wd"_dp
+%sa<ret>y
+%s\w+<ret>yp
+%s\w+<ret>yP
+%s\w+<ret>y,p
+%s\w+<ret>,yP
+%s\w+<ret>y),p
+%s\w+<ret>y)<A-s>p
+%s\w+<ret>"#R
+%s\w+<ret>".y
+wy%s\w+<ret>R
+%s\w+<ret>"ay,"aR
+"a2yp
+3p
+w3P
+wy3R

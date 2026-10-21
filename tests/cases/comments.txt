@@ -1,0 +1,16 @@
+ext: sh
+text: echo one\n  echo two\n\necho three
+<space>c
+x<space>c
+xx<space>c
+%<space>c
+%<space>c<space>c
+jx<space>c
+jxx<space>c
+xxxx<space>c
+
+text: # echo one\n  # echo two\necho three
+<space>c
+j<space>c
+xx<space>c
+xxx<space>c

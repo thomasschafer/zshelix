@@ -1,1030 +1,175 @@
-ZHM_CURSOR_BLOCK='\e[2 q'
-ZHM_CURSOR_BEAM='\e[6 q'
-ZHM_CURSOR_BAR='\e[4 q'
+# zshelix: Helix keybindings for zsh.
+#
+# Configuration variables must be set before this file is sourced; see the
+# README for the full list.
+
+0=${(%):-%N}
+typeset -g _ZHM_ROOT=${0:A:h}
+
+() {
+    emulate -L zsh
+    autoload -Uz is-at-least
+    if ! is-at-least 5.3; then
+        print -ru2 -- "zshelix requires zsh 5.3 or later (found $ZSH_VERSION)"
+        return 1
+    fi
+    if ! zmodload zsh/pcre 2>/dev/null; then
+        print -ru2 -- "zshelix: zsh was built without PCRE support (zsh/pcre); regex commands won't work"
+    fi
+}
+
+### Configuration defaults ###
+
+typeset -g ZHM_CURSOR_BLOCK=$'\e[2 q'
+typeset -g ZHM_CURSOR_BEAM=$'\e[6 q'
+typeset -g ZHM_CURSOR_BAR=$'\e[4 q'
 
 : ${ZHM_CURSOR_NORMAL:=$ZHM_CURSOR_BLOCK}
 : ${ZHM_CURSOR_INSERT:=$ZHM_CURSOR_BEAM}
 : ${ZHM_CURSOR_SELECT:=$ZHM_CURSOR_BAR}
 
-typeset -g ZSH_HIGHLIGHT_STYLE="bg=240"
-
-typeset -g ZHM_MODE_INSERT="INSERT"
-typeset -g ZHM_MODE_SELECT="SELECT"
-
-typeset -g ZHM_MOVEMENT_MOVE="MOVEMENT_MOVE"
-typeset -g ZHM_MOVEMENT_EXTEND="MOVEMENT_EXTEND"
-
-typeset -g ZHM_MODE=$ZHM_MODE_INSERT
-
-typeset -ga ZHM_UNDO_STATES=() # cursor_idx, anchor_idx, buffer_text
-typeset -g ZHM_UNDO_INDEX=-1
-
-# -1 means no selection
-typeset -g ZHM_ANCHOR=-1
-typeset -g ZHM_CLIPBOARD=""
-
-# System clipboard integration (set ZSH_HELIX_SYSTEM_CLIPBOARD=1 to enable)
-: ${ZSH_HELIX_SYSTEM_CLIPBOARD:=0}
-
-function zhm_clipboard_copy() {
-    local input
-    input=$(cat)
-
-    if [[ "$(uname)" == "Darwin" ]]; then
-        printf '%s' "$input" | pbcopy
-    elif [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-copy &>/dev/null; then
-        printf '%s' "$input" | wl-copy
-    elif [[ -n "$DISPLAY" ]]; then
-        if command -v xclip &>/dev/null; then
-            printf '%s' "$input" | xclip -selection clipboard
-        elif command -v xsel &>/dev/null; then
-            printf '%s' "$input" | xsel --clipboard --input
-        else
-            return 1
-        fi
-    elif [[ -n "$TMUX" ]]; then
-        tmux set-buffer -- "$input"
-    else
-        return 1
-    fi
-}
-
-function zhm_clipboard_paste() {
-    if [[ "$(uname)" == "Darwin" ]]; then
-        pbpaste
-    elif [[ -n "$WAYLAND_DISPLAY" ]] && command -v wl-paste &>/dev/null; then
-        wl-paste
-    elif [[ -n "$DISPLAY" ]]; then
-        if command -v xclip &>/dev/null; then
-            xclip -selection clipboard -o
-        elif command -v xsel &>/dev/null; then
-            xsel --clipboard --output
-        else
-            return 1
-        fi
-    elif [[ -n "$TMUX" ]]; then
-        tmux show-buffer
-    else
-        return 1
-    fi
-}
-
-### Utility functions ###
-function zhm_sign() {
-    local num=$1
-    echo $(( num > 0 ? 1 : num < 0 ? -1 : 0 ))
-}
-
-function zhm_max() {
-    echo $(( $1 > $2 ? $1 : $2 ))
-}
-
-function zhm_min() {
-    echo $(( $1 < $2 ? $1 : $2 ))
-}
-
-function zhm_log() {
-    echo $1 >> zhm.log
-}
-
-function zhm_clamp() {
-    local val=$1
-    local min=$2
-    local max=$3
-    if ((val < min)); then
-        echo $min
-    elif ((val > max)); then
-        echo $max
-    else
-        echo $val
-    fi
-}
-
-### Buffer state ###
-ZHM_EMPTY_BUFFER="<ZHM_EMPTY_BUFFER>"
-
-function zhm_history_append() {
-    if [[ $# -ne 3 ]]; then
-        echo "Error (zhm_history_append): Requires exactly 3 arguments, found $*" >&2
-        return 1
-    fi
-
-    if [[ ! $1 =~ ^-?[0-9]+$ ]] || [[ ! $2 =~ ^-?[0-9]+$ ]]; then
-        echo "Error (zhm_history_append): First two arguments must be integers" >&2
-        return 1
-    fi
-
-    # Only base64 encode non-empty buffer content
-    local encoded_buffer
-    if [[ -n $3 && $3 != $ZHM_EMPTY_BUFFER ]]; then
-        encoded_buffer=$(print -n "$3" | base64)
-    else
-        encoded_buffer=$ZHM_EMPTY_BUFFER
-    fi
-
-    # truncate history at this point
-    local cut_at=$(((ZHM_UNDO_INDEX + 1) * 3))
-    ZHM_UNDO_STATES=(${(@)ZHM_UNDO_STATES[1,$cut_at]})
-    ZHM_UNDO_STATES+=($1 $2 $encoded_buffer)
-    ((ZHM_UNDO_INDEX++))
-}
-
-function zhm_history_get_state() {
-    local start=$((ZHM_UNDO_INDEX * 3 + 1))
-    if [[ $start -ge ${#ZHM_UNDO_STATES[@]} ]]; then
-        echo "Error (zhm_history_get_state): Index $start out of range" >&2
-        return 1
-    fi
-
-    typeset -g _zhm_state_cursor=${ZHM_UNDO_STATES[$start]}
-    typeset -g _zhm_state_anchor=${ZHM_UNDO_STATES[$start+1]}
-    local encoded_buffer=${ZHM_UNDO_STATES[$start+2]}
-
-    if [[ $encoded_buffer == $ZHM_EMPTY_BUFFER ]]; then
-        typeset -g _zhm_state_buffer=""
-    else
-        typeset -g _zhm_state_buffer=$(base64 -d <<< $encoded_buffer)
-    fi
-    return 0
-}
-
-function zhm_debug_logs() {}
-
-function zhm_update_buffer() {
-    local save_state=$1
-    local new_buffer=${2:-""}
-    if [[ $new_buffer == $ZHM_EMPTY_BUFFER ]]; then
-        new_buffer=""
-    fi
-
-    if [[ $save_state == 1 && ($BUFFER != $new_buffer) ]]; then
-        zhm_save_state
-    fi
-    BUFFER=$new_buffer
-}
-
-function zhm_save_state() {
-    # Only save if buffer content changed
-    if [[ ${#ZHM_UNDO_STATES} -eq 0 ]] || [[ "$ZHM_UNDO_STATES[-1]" != "$BUFFER" ]]; then
-        zhm_history_append ${CURSOR:-0} $ZHM_ANCHOR ${BUFFER:-$ZHM_EMPTY_BUFFER}
-    fi
-}
-
-function zhm_undo() {
-    (( ZHM_UNDO_INDEX <= 0 )) && return
-
-    local buffer_start=$BUFFER
-
-    if zhm_history_get_state; then
-        zhm_update_buffer 0 "$_zhm_state_buffer"
-        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor $ZHM_MOVEMENT_MOVE
-        ((ZHM_UNDO_INDEX--))
-
-        if [[ $buffer_start == $BUFFER ]]; then
-            zhm_undo
-        fi
-    fi
-}
-
-function zhm_redo() {
-    local history_len=$(( ${#ZHM_UNDO_STATES[@]} / 3 ))
-    (( ZHM_UNDO_INDEX >= history_len - 1 )) && return
-
-    ((ZHM_UNDO_INDEX++))
-
-    local buffer_start=$BUFFER
-
-    if zhm_history_get_state; then
-        zhm_update_buffer 0 "$_zhm_state_buffer"
-        zhm_set_cursor_and_anchor $_zhm_state_cursor $_zhm_state_anchor $ZHM_MOVEMENT_MOVE
-
-        if [[ $buffer_start == $BUFFER ]]; then
-            zhm_redo
-        fi
-    fi
-}
-
-function zhm_clear_history() {
-    ZHM_UNDO_STATES=()
-    ZHM_UNDO_INDEX=-1
-    zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
-}
-
-function zhm_accept_line() {
-    zhm_clear_history
-    zhm_remove_highlight
-    zle accept-line
-}
-
-### Selection and highlighting ###
-function zhm_set_cursor_and_anchor() {
-    function zhm_safe_cursor_move() {
-        local new_pos=$1
-        CURSOR=$(zhm_clamp $new_pos 0 $#BUFFER)
-    }
-
-    function zhm_safe_anchor_move() {
-        local new_pos=$1
-        local upper_bound=$#BUFFER
-        if ((CURSOR < upper_bound)); then
-            ((upper_bound--))
-        fi
-        ZHM_ANCHOR=$(zhm_clamp $new_pos 0 $upper_bound)
-    }
-
-    if [[ $# -ne 3 ]]; then
-        echo "Error (zhm_set_cursor_and_anchor): Requires exactly 3 arguments, found $*" >&2
-        return 1
-    fi
-
-    local cursor=$1
-    local anchor=$2
-    local movement_type=$3
-
-    zhm_safe_cursor_move $cursor
-
-    case $movement_type in
-        $ZHM_MOVEMENT_MOVE)
-            zhm_safe_anchor_move $anchor
-            ;;
-        $ZHM_MOVEMENT_EXTEND)
-            case $ZHM_MODE in
-                $ZHM_MODE_NORMAL)
-                    zhm_safe_anchor_move $anchor
-                    ;;
-                $ZHM_MODE_INSERT)
-                    # TODO: don't do this if we can retain selection in insert mode
-                    zhm_safe_anchor_move $CURSOR
-                    ;;
-                $ZHM_MODE_SELECT)
-                    # No-op, extend selection
-                    ;;
-                *)
-                    echo "Invalid mode: $ZHM_MODE" >&2
-                    return 1
-                    ;;
-            esac
-            ;;
-        *)
-            echo "Invalid movement type: $movement_type" >&2
-            return 1
-            ;;
-    esac
-
-    # TODO: remove MODE != INSERT if we can retain selection in insert mode
-    if [[ "$ZHM_MODE" != "$ZHM_MODE_INSERT" ]] && (( ZHM_ANCHOR >= 0 )); then
-        if ((CURSOR >= ZHM_ANCHOR)); then
-            region_highlight=("${ZHM_ANCHOR} $((CURSOR + 1)) ${ZSH_HIGHLIGHT_STYLE}")
-        else
-            region_highlight=("${CURSOR} $((ZHM_ANCHOR + 1)) ${ZSH_HIGHLIGHT_STYLE}")
-        fi
-    else
-        zhm_remove_highlight
-    fi
-}
-
-function zhm_set_cursor() {
-    if [[ $# -ne 1 ]]; then
-        echo "Error (zhm_set_cursor): Requires exactly 1 argument, found $*" >&2
-        return 1
-    fi
-
-    local new_pos=$1
-    zhm_set_cursor_and_anchor $new_pos $ZHM_ANCHOR $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_set_anchor() {
-    if [[ $# -ne 2 ]]; then
-        echo "Error (zhm_set_anchor): Requires exactly 2 arguments, found $*" >&2
-        return 1
-    fi
-
-    local new_pos=$1
-    local movement_type=$2
-    zhm_set_cursor_and_anchor $CURSOR $new_pos $movement_type
-}
-
-function zhm_remove_highlight() {
-    region_highlight=()
-}
-
-function zhm_get_selection_bounds() {
-    if ((ZHM_ANCHOR < 0)); then
-        return 1
-    fi
-    if ((CURSOR >= ZHM_ANCHOR)); then
-        echo $ZHM_ANCHOR $((CURSOR + 1))
-    else
-        echo $CURSOR $((ZHM_ANCHOR + 1))
-    fi
-}
-
-function zhm_collapse_selection() {
-    zhm_set_cursor_and_anchor $CURSOR $CURSOR $ZHM_MOVEMENT_MOVE
-}
-
-function zhm_flip_selections() {
-    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR $ZHM_MOVEMENT_MOVE
-}
-
-### Mode switching ###
-function zhm_insert_mode_impl() {
-    # TODO: don't lose highlight
-    zhm_remove_highlight
-    ZHM_MODE=$ZHM_MODE_INSERT
-    zhm_print_cursor
-    bindkey -v
-    zhm_save_state
-}
-
-function zhm_normal_mode() {
-    if [[ "$ZHM_MODE" == "$ZHM_MODE_INSERT" ]]; then
-        # TODO: we won't need this if we can keep highlight in insert mode
-        zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
-    fi
-    ZHM_MODE=$ZHM_MODE_NORMAL
-    zhm_print_cursor
-    bindkey -A helix-normal-mode main
-    zhm_save_state
-}
-
-function zhm_select_mode() {
-    if [[ "$ZHM_MODE" == "$ZHM_MODE_SELECT" ]]; then
-        ZHM_MODE=$ZHM_MODE_NORMAL
-    else
-        ZHM_MODE=$ZHM_MODE_SELECT
-    fi
-    zhm_print_cursor
-    # TODO: do we need a helix-select-mode?
-    bindkey -A helix-normal-mode main
-    zhm_save_state
-}
-
-### Basic movement and editing ###
-function zhm_move_char_left() {
-    local pos=$((CURSOR - 1))
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_move_char_right() {
-    local pos=$((CURSOR + 1))
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_move_visual_line_down() {
-    zle down-line-or-history
-    zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_move_visual_line_up() {
-    zle up-line-or-history
-    zhm_set_anchor $CURSOR $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_append_mode() {
-    # TODO: after exiting to normal mode, move cursor back one. Also don't lose highlight
-    local pos=$(( $(zhm_max CURSOR ZHM_ANCHOR) + 1))
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
-    zhm_insert_mode_impl
-
-}
-
-function zhm_insert_mode() {
-    local pos=$(zhm_min CURSOR ZHM_ANCHOR)
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_EXTEND
-    zhm_insert_mode_impl
-}
-
-function zhm_find_line_first_non_blank() {
-    local pos=$1
-    local line_start=$(zhm_find_line_start $pos)
-    local line_end=$(zhm_find_line_end $pos)
-    local current=$line_start
-
-    while ((current < line_end)) && [[ "${BUFFER:$current:1}" =~ [[:space:]] ]]; do
-        ((current++))
+: ${ZHM_STYLE_SELECTION:=bg=238}
+: ${ZHM_STYLE_PRIMARY_SELECTION:=bg=240}
+: ${ZHM_STYLE_CURSOR:=bg=250,fg=black}
+
+: ${ZHM_INITIAL_MODE:=insert}
+: ${ZHM_TAB_WIDTH:=8}
+: ${ZHM_INDENT_WIDTH:=2}
+: ${ZHM_AUTO_PAIRS:=1}
+: ${ZHM_SEARCH_WRAP_AROUND:=1}
+: ${ZHM_HISTORY_NAVIGATION:=1}
+
+### Modules ###
+
+() {
+    local file
+    for file in core history registers movement widgets docs keymap \
+        commands/selection commands/edit commands/misc; do
+        source "$_ZHM_ROOT/lib/$file.zsh"
     done
-
-    echo $current
 }
 
-function zhm_insert_at_line_end() {
-    local pos=$(zhm_find_line_end $CURSOR)
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_MOVE
-    zhm_insert_mode_impl
+### Hooks ###
+
+function _zhm_line_init() {
+    emulate -L zsh
+    setopt extended_glob
+    _zhm_load_text
+    _zhm_detect_indent
+    _zhm_history_reset
+    _zhm_jumps_reset
+    _zhm_count=0 _zhm_register="" _zhm_restore_cursor=0 _zhm_replaying=0
+    _zhm_hl=()
+    _zhm_set_single $CURSOR $CURSOR
+    _zhm_set_mode $ZHM_INITIAL_MODE
+    _zhm_render
 }
 
-function zhm_insert_at_line_start() {
-    local pos=$(zhm_find_line_first_non_blank $CURSOR)
-    zhm_set_cursor_and_anchor $pos $pos $ZHM_MOVEMENT_MOVE
-    zhm_insert_mode_impl
-}
-
-### Selection operations ###
-function zhm_operate_on_selection() {
-    local operation=$1  # "yank", "cut", or "delete"
-
-    local bounds=($(zhm_get_selection_bounds))
-    if ((${#bounds} != 2)); then
-        return 1
-    fi
-    local start=$bounds[1]
-    local end=$bounds[2]
-
-    ZHM_CUT_BUFFER="${BUFFER:$start:$((end-start))}"
-
-    if [[ $operation != "yank" ]]; then
-        zhm_update_buffer 1 "${BUFFER:0:$start}${BUFFER:$end}"
-        zhm_set_cursor_and_anchor $start $start $ZHM_MOVEMENT_MOVE
-    fi
-
-    case $operation in
-        "cut")
-            zhm_insert_mode_impl
-            ;;
-        "delete")
-            zhm_normal_mode
-            ;;
-        "yank")
-            zhm_normal_mode
-            ;;
-        *)
-            echo "Invalid operation: $operation" >&2
-            return 1
-            ;;
-    esac
-
-    return 0
-}
-
-function zhm_yank() {
-    zhm_operate_on_selection "yank"
-
-    # Copy to system clipboard if enabled
-    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" && -n "$ZHM_CUT_BUFFER" ]]; then
-        printf '%s' "$ZHM_CUT_BUFFER" | zhm_clipboard_copy
+function _zhm_line_pre_redraw() {
+    emulate -L zsh
+    setopt extended_glob
+    if [[ $BUFFER != "$_zhm_buf" ]] || (( CURSOR != _zhm_cur )); then
+        _zhm_sync
+        _zhm_render
     fi
 }
 
-function zhm_change_selection() {
-    zhm_operate_on_selection "cut"
+function _zhm_line_finish() {
+    emulate -L zsh
+    _zhm_clear_highlight
+    [[ -n $ZHM_CURSOR_INSERT ]] && print -n -- "$ZHM_CURSOR_INSERT" > /dev/tty
 }
 
-function zhm_delete_selection() {
-    zhm_operate_on_selection "delete"
-}
-
-function zhm_paste() {
-    local before=$1  # 1 for paste before, 0 for paste after
-
-    # Use system clipboard content if enabled and available
-    local paste_content="$ZHM_CUT_BUFFER"
-    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
-        local system_clipboard=$(zhm_clipboard_paste 2>/dev/null)
-        if [[ -n "$system_clipboard" ]]; then
-            paste_content="$system_clipboard"
-        fi
-    fi
-
-    if [[ -z "$paste_content" ]]; then
-        return
-    fi
-    local bounds=($(zhm_get_selection_bounds))
-    if ((${#bounds} != 2)); then
-        return 1
-    fi
-
-    local paste_pos=$((before ? bounds[1] : bounds[2]))
-    if ((paste_pos > ${#BUFFER})); then
-        ((paste_pos--))
-    fi
-
-    zhm_update_buffer 1 "${BUFFER:0:$paste_pos}${paste_content}${BUFFER:$paste_pos}"
-
-    local pos1=$paste_pos
-    local pos2=$((paste_pos + ${#paste_content} - 1))
-
-    # Select pasted contents
-    local ordering=$(zhm_sign $((CURSOR - ZHM_ANCHOR)))
-    local cursor= anchor=
-    if [[ $ordering == 1 ]]; then
-        cursor=$pos2
-        anchor=$pos1
-    else
-        cursor=$pos1
-        anchor=$pos2
-    fi
-    zhm_set_cursor_and_anchor $cursor $anchor $ZHM_MOVEMENT_MOVE
-
-    zhm_normal_mode
-}
-
-function zhm_paste_after() {
-    zhm_paste 0
-}
-
-function zhm_paste_before() {
-    zhm_paste 1
-}
-
-function zhm_replace() {
-    local bounds=($(zhm_get_selection_bounds))
-    if ((${#bounds} != 2)); then
-        return 1
-    fi
-    local start=$bounds[1]
-    local end=$bounds[2]
-    local len=$((end - start))
-
-    read -k 1 char
-    if [[ $? != 0 ]] || [[ $char == $'\e' ]]; then
-        zhm_normal_mode
-        return 0
-    fi
-
-    # Create string of repeated characters
-    local replacement=""
-    for ((i = 0; i < len; i++)); do
-        replacement+="$char"
-    done
-
-    zhm_update_buffer 1 "${BUFFER:0:$start}${replacement}${BUFFER:$end}"
-    zhm_normal_mode
-}
-
-function zhm_replace_with_yanked() {
-    local bounds=($(zhm_get_selection_bounds))
-
-    # Use system clipboard content if enabled and available
-    local replace_content="$ZHM_CUT_BUFFER"
-    if [[ "$ZSH_HELIX_SYSTEM_CLIPBOARD" == "1" ]]; then
-        local system_clipboard=$(zhm_clipboard_paste 2>/dev/null)
-        if [[ -n "$system_clipboard" ]]; then
-            replace_content="$system_clipboard"
-        fi
-    fi
-
-    if ((${#bounds} != 2)) || [[ -z "$replace_content" ]]; then
-        return 1
-    fi
-    local start=$bounds[1]
-    local end=$bounds[2]
-
-    zhm_update_buffer 1 "${BUFFER:0:$start}${replace_content}${BUFFER:$end}"
-
-    # Select pasted contents
-    local new_cursor=$((start + ${#replace_content} - 1))
-    zhm_set_cursor_and_anchor $new_cursor $start $ZHM_MOVEMENT_MOVE
-
-    zhm_normal_mode
-}
-
-### Word boundary navigation ###
-# TODO: this has some issues with single letter words, e.g. when moving back and forth in "a b c"
-function zhm_move_word_impl() {
-    ## Helper functions ##
-    function is_word_char() {
-        local char="${BUFFER:$1:1}"
-        [[ $char =~ [a-zA-Z0-9_] ]]
-    }
-
-    function is_whitespace() {
-        local char="${BUFFER:$1:1}"
-        [[ $char =~ [[:space:]] ]]
-    }
-
-    function is_not_whitespace() {
-        ! is_whitespace "$1"
-    }
-
-    function is_symbol() {
-        ! is_word_char "$1" && ! is_whitespace "$1"
-    }
-
-    function char_type() {
-        local pos=$1
-        if is_word_char $pos; then
-            echo 1
-        elif is_symbol $pos; then
-            echo 2
-        else
-            echo 3
-        fi
-    }
-
-    function within_bounds() {
-        local num=$1
-        if [[ ! $num =~ ^-?[0-9]+$ ]]; then
-            echo "Error (zhm_move_word_impl): argument must be a number" >&2
-            return 1
-        fi
-        (( num >= 0 && num <= len - 1 ))
-    }
-
-    function consume_word_chars() {
-        if ((whitespace_first)) && within_bounds $((pos + step)) && is_whitespace $pos; then
-            # TODO: this is hacky
-            ((pos += step))
-        fi
-        local word_matcher=
-        case $word_type in
-            "word")
-                if is_word_char $pos; then
-                    word_matcher="is_word_char"
-                elif is_symbol $pos; then
-                    word_matcher="is_symbol"
-                fi
-                ;;
-            "long_word")
-                word_matcher="is_not_whitespace"
-                ;;
-            *)
-                echo "Error (zhm_move_word_impl): Invalid word_type '$word_type'" >&2
-                return 1
-                ;;
-        esac
-
-        if [ -n "$word_matcher" ]; then
-            while within_bounds $((pos + step)) && $word_matcher $((pos + step)); do
-                ((pos += step))
-            done
-        fi
-    }
-    function consume_whitespace() {
-        if ((whitespace_first)) && is_not_whitespace $pos; then
-            # TODO: this is hacky
-            return 0
-        fi
-        while within_bounds $((pos + step)) && is_whitespace $((pos + step)); do
-            ((pos += step))
-        done
-    }
-
-    ## Argument parsing ##
-    if [[ $# -ne 3 ]]; then
-        echo "Error (zhm_move_word_impl): Requires exactly 3 arguments, found '$*'" >&2
-        return 1
-    fi
-
-    local direction=$1  # next | prev
-    local position=$2   # start | end
-    local word_type=$3  # word | long_word
-
-    local step=
-    case $direction in
-        "next")
-            step=1
-            ;;
-        "prev")
-            step=-1
-            ;;
-        *)
-            echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
-            return 1
-            ;;
-    esac
-
-    local whitespace_first=
-    case $position in
-        "start")
-            case $direction in
-                "next")
-                    whitespace_first=0
-                    ;;
-                "prev")
-                    whitespace_first=1
-                    ;;
-                *)
-                    echo "Error (zhm_move_word_impl): Invalid direction '$direction'" >&2
-                    return 1
-                    ;;
-            esac
-            ;;
-        "end")
-            whitespace_first=1
-            ;;
-        *)
-            echo "Error (zhm_move_word_impl): Invalid position '$position'" >&2
-            return 1
-            ;;
-    esac
-
-    ## Logic ##
-    local len=$#BUFFER
-
-    local prev_cursor=$CURSOR
-    local prev_anchor=$ZHM_ANCHOR
-    local pos=$CURSOR
-
-    local prev_step=$(zhm_sign $((prev_cursor - prev_anchor)))
-    if [[ "$ZHM_MODE" == "$ZHM_MODE_SELECT" ]] || \
-        ( (( prev_step != (-step) )) && [[ $(char_type $pos) != $(char_type $((pos + step))) ]] ); then
-
-        ((pos += step))
-    fi
-    local new_anchor=$pos
-
-   if ((whitespace_first)); then
-        consume_whitespace
-        consume_word_chars
-    else
-        consume_word_chars
-        consume_whitespace
-    fi
-
-
-    local new_cursor=$pos
-
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_move_next_word_start() {
-    zhm_move_word_impl "next" "start" "word"
-}
-
-function zhm_move_next_long_word_start() {
-    zhm_move_word_impl "next" "start" "long_word"
-}
-
-function zhm_move_prev_word_start() {
-    zhm_move_word_impl "prev" "start" "word"
-}
-
-function zhm_move_prev_long_word_start() {
-    zhm_move_word_impl "prev" "start" "long_word"
-}
-
-function zhm_move_next_word_end() {
-    zhm_move_word_impl "next" "end" "word"
-}
-
-function zhm_move_next_long_word_end() {
-    zhm_move_word_impl "next" "end" "long_word"
-}
-
-### Line movement helpers ###
-function zhm_find_line_start() {
-    local pos=$1
-    local start=$pos
-
-    while ((start > 0)) && [[ ${BUFFER:$((start-1)):1} != $'\n' ]]; do
-        ((start--))
-    done
-    echo $start
-}
-
-function zhm_find_line_end() {
-    local pos=$1
-    local buffer_len=$#BUFFER
-    local end=$pos
-
-    while ((end < buffer_len)) && [[ ${BUFFER:$end:1} != $'\n' ]]; do
-        ((end++))
-    done
-    echo $end
-}
-
-function zhm_swap_cursor_anchor() {
-    zhm_set_cursor_and_anchor $ZHM_ANCHOR $CURSOR $ZHM_MOVEMENT_MOVE
-}
-
-function zhm_goto_line_start() {
-    local line_start=$(zhm_find_line_start $CURSOR)
-    zhm_set_cursor_and_anchor $line_start $line_start $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_goto_line_end() {
-    local line_end=$(zhm_find_line_end $CURSOR)
-    zhm_set_cursor_and_anchor $line_end $line_end $ZHM_MOVEMENT_EXTEND
-}
-
-
-function zhm_goto_first_nonwhitespace() {
-    local first_char=$(zhm_find_line_first_non_blank $CURSOR)
-    zhm_set_cursor_and_anchor $first_char $first_char $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_goto_file_start() {
-    zhm_set_cursor_and_anchor 0 0 $ZHM_MOVEMENT_EXTEND
-}
-
-function zhm_goto_last_line() {
-    zhm_set_cursor_and_anchor $#BUFFER $#BUFFER $ZHM_MOVEMENT_EXTEND
-}
-
-### Line extension commands ###
-function zhm_extend_line_below() {
-    if ((CURSOR < ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
-        zhm_swap_cursor_anchor
-    fi
-
-    local new_anchor=$(zhm_find_line_start $ZHM_ANCHOR)
-
-    local current_line_end=$(zhm_find_line_end $CURSOR)
-
-    local new_cursor=$CURSOR
-    if ((new_cursor != current_line_end)); then
-        new_cursor=$current_line_end
-    else
-        if ((new_cursor < $#BUFFER)); then
-            ((new_cursor++))
-            new_cursor=$(zhm_find_line_end $new_cursor)
-        fi
-    fi
-
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_MOVE
-}
-
-function zhm_extend_line_above() {
-    if ((CURSOR > ZHM_ANCHOR && ZHM_ANCHOR >= 0)); then
-        zhm_swap_cursor_anchor
-    fi
-
-    local new_anchor=$(zhm_find_line_end $ZHM_ANCHOR)
-
-    local current_line_start=$(zhm_find_line_start $CURSOR)
-
-    local new_cursor=$CURSOR
-    if ((new_cursor != current_line_start)); then
-        new_cursor=$current_line_start
-    else
-        if ((new_cursor > 0)); then
-            ((new_cursor--))
-            new_cursor=$(zhm_find_line_start $new_cursor)
-        fi
-    fi
-
-    zhm_set_cursor_and_anchor $new_cursor $new_anchor $ZHM_MOVEMENT_MOVE
-}
-
-function zhm_select_all() {
-    zhm_set_cursor_and_anchor $#BUFFER 0 $ZHM_MOVEMENT_EXTEND
-}
+function _zhm_readkey_nop() {}
 
 ### Initialisation ###
-function zhm_print_cursor() {
-    local cursor=
-    case $ZHM_MODE in
-        $ZHM_MODE_INSERT)
-            cursor=$ZHM_CURSOR_INSERT
-            ;;
-        $ZHM_MODE_NORMAL)
-            cursor=$ZHM_CURSOR_NORMAL
-            ;;
-        $ZHM_MODE_SELECT)
-            cursor=$ZHM_CURSOR_SELECT
-            ;;
-        *)
-            echo "Error (zhm_print_cursor): Invalid mode '$ZHM_MODE'" >&2
-            return 1
-            ;;
-    esac
 
-    print -n $cursor
-}
+function _zhm_initialise() {
+    emulate -L zsh
+    setopt extended_glob
 
-function zhm_initialise() {
-    local -a widgets=(
-        zhm_normal_mode
-        zhm_insert_mode
-        zhm_select_mode
-        zhm_move_char_left
-        zhm_move_char_right
-        zhm_append_mode
-        zhm_insert_at_line_end
-        zhm_insert_mode_impl
-        zhm_insert_at_line_start
-        zhm_yank
-        zhm_change_selection
-        zhm_delete_selection
-        zhm_paste_after
-        zhm_paste_before
-        zhm_replace
-        zhm_replace_with_yanked
-        zhm_move_next_word_start
-        zhm_move_next_long_word_start
-        zhm_move_prev_word_start
-        zhm_move_prev_long_word_start
-        zhm_move_next_word_end
-        zhm_move_next_long_word_end
-        zhm_goto_line_start
-        zhm_goto_line_end
-        zhm_goto_first_nonwhitespace
-        zhm_goto_file_start
-        zhm_goto_last_line
-        zhm_undo
-        zhm_redo
-        zhm_debug_logs
-        zhm_extend_line_below
-        zhm_extend_line_above
-        zhm_collapse_selection
-        zhm_flip_selections
-        zhm_select_all
-        zhm_move_visual_line_down
-        zhm_move_visual_line_up
-        zhm_accept_line
-    )
-    for widget in $widgets; do
-        zle -N $widget
+    if is-at-least 5.9; then
+        typeset -g _zhm_memo="memo=zshelix"
+    fi
+
+    # A widget for every command.
+    local name
+    for name in ${(k)functions[(I)_zhm_cmd_*]}; do
+        zle -N zhm_${name#_zhm_cmd_} _zhm_widget
     done
+    zle -N zhm-menu _zhm_menu_widget
+    zle -N zhm-readkey-key _zhm_readkey_nop
+    zle -N zhm-readkey-utf8 _zhm_readkey_nop
 
-    ## Normal mode ##
-    bindkey -N helix-normal-mode
-    # Movement
-    bindkey -M helix-normal-mode 'h' zhm_move_char_left  # DESC: Move left
-    bindkey -M helix-normal-mode 'j' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
-    bindkey -M helix-normal-mode 'k' zhm_move_visual_line_up  # DESC: Move up (or back through history)
-    bindkey -M helix-normal-mode 'l' zhm_move_char_right  # DESC: Move right
-    bindkey -M helix-normal-mode '\e[D' zhm_move_char_left  # HIDDEN
-    bindkey -M helix-normal-mode '\e[B' zhm_move_visual_line_down  # HIDDEN
-    bindkey -M helix-normal-mode '\e[A' zhm_move_visual_line_up  # HIDDEN
-    bindkey -M helix-normal-mode '\e[C' zhm_move_char_right  # HIDDEN
-    bindkey -M helix-normal-mode 'w' zhm_move_next_word_start  # DESC: Move next word start
-    bindkey -M helix-normal-mode 'W' zhm_move_next_long_word_start  # DESC: Move next WORD start
-    bindkey -M helix-normal-mode 'b' zhm_move_prev_word_start  # DESC: Move previous word start
-    bindkey -M helix-normal-mode 'B' zhm_move_prev_long_word_start  # DESC: Move previous WORD start
-    bindkey -M helix-normal-mode 'e' zhm_move_next_word_end  # DESC: Move next word end
-    bindkey -M helix-normal-mode 'E' zhm_move_next_long_word_end  # DESC: Move next WORD end
-    # Changes
-    bindkey -M helix-normal-mode 'r' zhm_replace  # DESC: Replace with a character
-    bindkey -M helix-normal-mode 'R' zhm_replace_with_yanked  # DESC: Replace with yanked text
-    bindkey -M helix-normal-mode 'c' zhm_change_selection  # DESC: Change selection (delete and enter insert mode)
-    bindkey -M helix-normal-mode 'd' zhm_delete_selection  # DESC: Delete selection
-    bindkey -M helix-normal-mode 'i' zhm_insert_mode  # DESC: Insert before selection
-    bindkey -M helix-normal-mode 'I' zhm_insert_at_line_start  # DESC: Insert at the start of the line
-    bindkey -M helix-normal-mode 'a' zhm_append_mode  # DESC: Insert after selection (append)
-    bindkey -M helix-normal-mode 'A' zhm_insert_at_line_end  # DESC: Insert at the end of the line
-    bindkey -M helix-normal-mode 'u' zhm_undo  # DESC: Undo change
-    bindkey -M helix-normal-mode 'U' zhm_redo  # DESC: Redo change
-    bindkey -M helix-normal-mode 'y' zhm_yank  # DESC: Yank selection
-    bindkey -M helix-normal-mode 'p' zhm_paste_after  # DESC: Paste after selection
-    bindkey -M helix-normal-mode 'P' zhm_paste_before  # DESC: Paste before selection
-    # Selection manipulation
-    bindkey -M helix-normal-mode 'x' zhm_extend_line_below  # DESC: Select current line, if already selected, extend to next line
-    # TODO: the below should default to `extend_to_line_bounds` - override with config
-    bindkey -M helix-normal-mode 'X' zhm_extend_line_above  # DESC: Select current line, if already selected, extend to previous line
-    bindkey -M helix-normal-mode ';' zhm_collapse_selection  # DESC: Collapse selection onto a single cursor
-    bindkey -M helix-normal-mode '\e;' zhm_flip_selections  # DESC: Flip selection cursor and anchor
-    bindkey -M helix-normal-mode '%' zhm_select_all  # DESC: Select entire file
-    bindkey -M helix-normal-mode 'v' zhm_select_mode  # DESC: Enter select (extend) mode
-    bindkey -M helix-normal-mode '\e' zhm_normal_mode  # DESC: Switch to normal mode
-    # Goto commands
-    bindkey -M helix-normal-mode 'gh' zhm_goto_line_start  # DESC: Go to the start of the line
-    bindkey -M helix-normal-mode 'gl' zhm_goto_line_end  # DESC: Go to the end of the line
-    bindkey -M helix-normal-mode 'gs' zhm_goto_first_nonwhitespace  # DESC: Go to first non-whitespace character of the line
-    bindkey -M helix-normal-mode 'gg' zhm_goto_file_start  # DESC: Go start of file
-    bindkey -M helix-normal-mode 'ge' zhm_goto_last_line  # DESC: Go to the end of the file
-    # Debug
-    bindkey -M helix-normal-mode 'D' zhm_debug_logs  # HIDDEN
-    # Command handling
-    bindkey -M helix-normal-mode '^M' zhm_accept_line  # DESC: Run the command in the buffer
-    bindkey -M helix-normal-mode '^L' clear-screen  # DESC: clear the current buffer
-    # History search
-    bindkey -M helix-normal-mode '^P' zhm_move_visual_line_up  # DESC: Move up (or back through history)
-    bindkey -M helix-normal-mode '^N' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
+    # Keymap used to read single keys inside commands.
+    bindkey -N zhm-readkey
+    bindkey -M zhm-readkey -R '^@'-'^?' zhm-readkey-key
+    bindkey -M zhm-readkey -R '\M-^@'-'\M-^?' zhm-readkey-utf8
+    local key seq
+    for key in esc left right up down home end pageup pagedown del S-tab \
+        A-backspace A-del A-up A-down A-left A-right; do
+        _zhm_key_raw $key
+        for seq in "${reply[@]}"; do
+            _zhm_bindkey_escape "$seq"
+            bindkey -M zhm-readkey -- "$REPLY" zhm-readkey-key
+        done
+    done
+    local -i c
+    for (( c = 32; c < 127; c++ )); do
+        _zhm_bindkey_escape $'\e'${(#)c}
+        bindkey -M zhm-readkey -- "$REPLY" zhm-readkey-key
+    done
+    for seq in "$_ZHM_KEY_ESC" "$_ZHM_KEY_REPLAY_END"; do
+        _zhm_bindkey_escape "$seq"
+        bindkey -M zhm-readkey -- "$REPLY" zhm-readkey-key
+    done
+    _zhm_key_names_init
 
-    ## Insert mode ##
-    bindkey -M viins '\e' zhm_normal_mode  # DESC: Switch to normal mode
-    # Movement
-    bindkey -M viins '\eb' zhm_move_prev_word_start  # DESC: Move previous word start
-    bindkey -M viins '\ef' zhm_move_next_word_start  # DESC: Move next word start
-    bindkey -M viins '\eB' zhm_move_prev_word_start  # HIDDEN
-    bindkey -M viins '\eF' zhm_move_next_word_start  # HIDDEN
-    bindkey -M viins '\e[D' backward-char  # DESC: Backward a char
-    bindkey -M viins '\e[C' forward-char  # DESC: Forward a char
-    bindkey -M viins '\e[1~' zhm_goto_line_start  # DESC: Move to line start
-    bindkey -M viins '\e[4~' zhm_goto_line_end  # DESC: Move to line end
-    # Editing
-    bindkey -M viins '\ed' delete-word  # DESC: Delete next word
-    bindkey -M viins '\e[3~' delete-char  # DESC: Delete next char
-    bindkey -M viins '\e\177' backward-kill-word  # DESC: Delete previous word
-    bindkey -M viins '\e^?' backward-kill-word  # DESC: Delete previous word
-    bindkey -M viins '\e[3;3~' delete-word  # DESC: Delete next word
-    bindkey -M viins '\e\e[3~' delete-word  # DESC: Delete next word
-    bindkey -M viins '^?' backward-delete-char  # DESC: Delete previous char
-    bindkey -M viins '^M' zhm_accept_line  # DESC: Run the command in the buffer
-    # History search
-    bindkey -M viins '^R' history-incremental-search-backward  # DESC: Search history backward
-    bindkey -M viins '^S' history-incremental-search-forward  # DESC: Search history forward
-    bindkey -M viins '^F' history-incremental-search-forward  # DESC: Search history forward
-    bindkey -M viins '^P' zhm_move_visual_line_up  # DESC: Move up (or back through history)
-    bindkey -M viins '^N' zhm_move_visual_line_down  # DESC: Move down (or forward through history)
+    # Normal mode, then select mode as a copy of normal mode with overrides.
+    bindkey -N zhm-normal
+    bindkey -M zhm-normal -R ' '-'~' zhm_noop
+    for (( c = 0; c <= 9; c++ )); do
+        bindkey -M zhm-normal -- "$c" zhm_count_$c
+    done
+    _zhm_define_normal_keymap
+    _zhm_bindkey_escape "$_ZHM_KEY_REPEAT_INSERT"
+    bindkey -M zhm-normal -- "$REPLY" zhm_repeat_insert_once
+    bindkey -M zhm-normal '^[[200~' zhm_paste_bracketed_input
+    _zhm_bindkey_escape "$_ZHM_KEY_REPLAY_END"
+    bindkey -M zhm-normal -- "$REPLY" zhm_replay_end
+    bindkey -M viins -- "$REPLY" zhm_replay_end
+    bindkey -N zhm-select zhm-normal
+    _zhm_define_select_keymap
 
-    # Set short timeout for escape key
-    KEYTIMEOUT=1
+    # Insert mode uses viins, so that bindings other plugins add there (fzf,
+    # atuin, ...) keep working.
+    bindkey -M viins -R ' '-'~' zhm_insert_typed
+    bindkey -M viins -R '\M-^@'-'\M-^?' zhm_insert_typed
+    bindkey -M viins '^[[200~' zhm_paste_bracketed_input
+    _zhm_define_insert_keymap
+    # Ctrl-r searches history, as the shell user expects, unless something
+    # else (fzf, atuin) has already claimed it.
+    if [[ $(bindkey -M viins '^R') == *' 'redisplay ]]; then
+        bindkey -M viins '^R' history-incremental-search-backward
+    fi
+    if [[ $(bindkey -M viins '^S') == *' 'undefined-key ]]; then
+        bindkey -M viins '^S' history-incremental-search-forward
+    fi
 
-    # Start in insert mode with default Zsh behavior
+    if [[ -z $ZHM_KEYTIMEOUT ]]; then
+        KEYTIMEOUT=1
+    else
+        KEYTIMEOUT=$ZHM_KEYTIMEOUT
+    fi
+
+    autoload -Uz add-zle-hook-widget
+    add-zle-hook-widget line-init _zhm_line_init
+    add-zle-hook-widget line-pre-redraw _zhm_line_pre_redraw
+    add-zle-hook-widget line-finish _zhm_line_finish
+
+    # Make viins the main keymap so that widgets which reset the keymap return
+    # to insert mode.
     bindkey -v
-    zhm_insert_mode_impl
-
-    # TODO (hacky): we shouldn't need this
-    zhm_history_append 0 0 $ZHM_EMPTY_BUFFER
-
-    zhm_print_cursor
 }
 
-zhm_initialise
-
-# TODO:
-# - ADD TESTS!
-# - Add option for delete without yanking
+_zhm_initialise

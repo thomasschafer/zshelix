@@ -1,0 +1,28 @@
+text: the quick brown fox jumps over the lazy dog
+fo
+2fo
+fofo
+to
+toto
+2to
+wFe
+wwwTe
+wwwFt
+fzx
+fo;
+fo<A-.>
+fq<A-.>
+3fo<A-.>
+vfo
+vtx
+vfofo
+f<esc>w
+
+text: line one\nline two\nline three\n
+f<ret>
+2f<ret>
+t<ret>
+jF<ret>
+jT<ret>
+jjF<ret>
+f<ret>f<ret>
