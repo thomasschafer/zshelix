@@ -31,6 +31,8 @@ extra = {
     "eof_or_delete_char_forward": "Delete next char (exit the shell if the line is empty)",
     "eof_or_page_cursor_half_down": "Move page and cursor half down (exit the shell if the line is empty)",
     "insert_typed": "Insert the typed character",
+    "insert_key_char": "Insert the character of a Ctrl or Alt key",
+    "replay_end": "End replaying keys",
     "paste_bracketed_input": "Paste from the terminal",
     "repeat_insert_once": "Repeat the last insert once",
     "noop": "Do nothing",
@@ -39,6 +41,10 @@ extra = {
     "select_textobject_around_surrounding_pair": "Select around surrounding pair",
     "select_textobject_inside_prev_pair": "Select inside previous pair",
     "select_textobject_inside_next_pair": "Select inside next pair",
+    # Helix uses tree-sitter for these when available, and plain text
+    # matching otherwise, which is what zshelix does.
+    "select_textobject_inside_closest_surrounding_pair": "Select inside closest surrounding pair",
+    "select_textobject_around_closest_surrounding_pair": "Select around closest surrounding pair",
 }
 
 def quote(s):

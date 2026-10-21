@@ -723,6 +723,46 @@
 "NOR",
 "«a¦‡»\n«bb¦»\n«ccc¦»\n«dddd¦»\n"
 ],
+"[\"ab\\n\", \"%sa|b<ret><paste:Z>\"]": [
+"NOR",
+"«Z¦‡»a«Z¦»b\n"
+],
+"[\"ab\\n\", \"%sa|b<ret>i<paste:Z><esc>\"]": [
+"NOR",
+"Z¦‡«a»Z¦«b»\n"
+],
+"[\"ab\\n\", \"<paste:XY>\"]": [
+"NOR",
+"«XY¦‡»ab\n"
+],
+"[\"ab\\n\", \"<paste:XY>u\"]": [
+"NOR",
+"«a¦‡»b\n"
+],
+"[\"ab\\n\", \"<paste:line\\\\n>\"]": [
+"NOR",
+"«line\n¦‡»ab\n"
+],
+"[\"ab\\n\", \"a<paste:XY><esc>\"]": [
+"NOR",
+"«aXY¦‡»b\n"
+],
+"[\"ab\\n\", \"a<paste:XY><esc>u\"]": [
+"NOR",
+"«ab¦‡»\n"
+],
+"[\"ab\\n\", \"a<paste:two\\\\nlines><esc>\"]": [
+"NOR",
+"«atwo\nlines¦‡»b\n"
+],
+"[\"ab\\n\", \"i<paste:XY><esc>\"]": [
+"NOR",
+"XY¦‡«a»b\n"
+],
+"[\"ab\\n\", \"v<paste:XY>\"]": [
+"NOR",
+"XY«a¦‡»b\n"
+],
 "[\"alpha beta gamma\\n\", \"%s\\\\w+<ret>,yP\"]": [
 "NOR",
 "«alpha¦‡»alpha beta gamma\n"
@@ -950,6 +990,30 @@
 "[\"base\\n\", \"xdu\"]": [
 "NOR",
 "«base\n¦‡»"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"%sl<ret>cX<esc>g.\"]": [
+"NOR",
+"echo \"heX«o¦‡» worXd\" | grep -o 'o' && Xs -Xa\n"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"ax<esc>g.\"]": [
+"NOR",
+"ex«c¦‡»ho \"hello world\" | grep -o 'o' && ls -la\n"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"ax<right><A-d><esc>g.\"]": [
+"NOR",
+"ex«c¦‡» \"hello world\" | grep -o 'o' && ls -la\n"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"ax<right><A-d><esc>g.<esc><esc>\"]": [
+"NOR",
+"ex«c¦‡» \"hello world\" | grep -o 'o' && ls -la\n"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"wd<esc>g.\"]": [
+"NOR",
+"«\"¦‡»hello world\" | grep -o 'o' && ls -la\n"
+],
+"[\"echo \\\"hello world\\\" | grep -o 'o' && ls -la\\n\", \"xdg.\"]": [
+"NOR",
+"«¦‡»"
 ],
 "[\"echo one\\n  echo two\\n\\necho three\\n\", \"%<space>c\", \"sh\"]": [
 "NOR",

@@ -47,6 +47,7 @@ NAMED_KEYS = {
     "lt": b"<",
     "gt": b">",
     "minus": b"-",
+    "F5": b"\x1b[15~",
 }
 
 
@@ -63,6 +64,10 @@ def parse_keys(spec):
             i = j + 1
             if name in NAMED_KEYS:
                 events.append(NAMED_KEYS[name])
+            elif name.startswith("paste:"):
+                # A bracketed paste, sent all at once as a terminal would.
+                content = name[len("paste:") :].replace("\\n", "\n").replace("\\t", "\t")
+                events.append(b"\x1b[200~" + content.encode() + b"\x1b[201~")
             elif name.startswith("A-"):
                 rest = name[2:]
                 events.append(b"\x1b" + NAMED_KEYS.get(rest, rest.encode()))
@@ -251,8 +256,10 @@ LANGUAGE_ENV = {
 }
 
 
-def run_zsh(text, keys, delay=0.02, env_extra=None, ext="txt"):
-    """Returns (mode, marked_text) as produced by zsh with zshelix."""
+def run_zsh(text, keys, delay=0.02, env_extra=None, ext="txt", rc_before="", rc_after=""):
+    """Returns (mode, marked_text) as produced by zsh with zshelix. rc_before
+    and rc_after are extra zshrc lines to run before and after sourcing
+    zshelix."""
     if not text.endswith("\n"):
         raise ValueError("test text must end with a newline")
     d = tempfile.mkdtemp(prefix="zhm-zsh-")
@@ -262,14 +269,14 @@ def run_zsh(text, keys, delay=0.02, env_extra=None, ext="txt"):
         with open(inp, "w") as f:
             f.write(text)
         with open(os.path.join(d, ".zshrc"), "w") as f:
-            f.write(
-                ZSHRC
-                % {
-                    "input": inp,
-                    "output": out,
-                    "plugin": os.path.join(ROOT, "zshelix.plugin.zsh"),
-                }
-            )
+            rc = ZSHRC % {
+                "input": inp,
+                "output": out,
+                "plugin": os.path.join(ROOT, "zshelix.plugin.zsh"),
+            }
+            rc = rc.replace("source " + os.path.join(ROOT, "zshelix.plugin.zsh"),
+                            rc_before + "\nsource " + os.path.join(ROOT, "zshelix.plugin.zsh") + "\n" + rc_after)
+            f.write(rc)
         env = dict(os.environ, ZDOTDIR=d, TERM="xterm-256color", HOME=d)
         for k in list(env):
             if k.startswith("ZHM_") or k == "ZSH_HELIX_SYSTEM_CLIPBOARD":

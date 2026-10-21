@@ -1,13 +1,27 @@
 # zshelix
 
-This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
+Helix keybindings for zsh. zshelix ports Helix's editing model to the zsh command line, rather than mapping Helix keys onto zsh's vi mode, so commands behave the way they do in Helix: selections come first, there can be several of them, and motions, text objects, search, registers, macros and undo all follow Helix's rules.
 
 ![zshelix preview](media/preview.png)
+
+Highlights:
+
+- Normal, insert and select modes, with counts, and the `g`, `m`, `[`, `]`, `space` and `z` menus (with a popup listing the keys, like Helix's).
+- Multiple selections: `s`, `S`, `K`, `C`, `Alt-s`, `,`, `(`, `)`, `&`, `_` and friends, with typing, deleting and pasting applied at every selection.
+- Word, paragraph and pair text objects (`mi`, `ma`), surround (`ms`, `mr`, `md`) and bracket matching (`mm`).
+- Regex search with `/`, `?`, `n`, `N` and `*`, with live previews.
+- Registers, including the system clipboard (`space y`, `space p`, `"+`), plus macros (`Q`, `q`) and repeating the last insert (`.`).
+- Helix's undo tree (`u`, `U`, `Alt-u`, `Alt-U`) and jumplist (`Ctrl-o`, `Tab`).
+- Shell pipes (`|`, `!`, `Alt-!`, `$`) and a `:` command line with `:sort`, `:pipe`, `:yank-join` and more.
+
+Expected behaviour is taken from Helix itself: the test suite runs every case in Helix and in zsh and compares the results (see [Tests](#tests)).
 
 
 ## Installation
 
-### Manual Installation
+zshelix needs zsh 5.3 or later, built with PCRE support (the `zsh/pcre` module) for the regex commands. Most distributions and Homebrew build zsh with PCRE.
+
+### Manually
 
 1. Clone this repository (replace `$HOME/zshelix` with a different directory if preferred):
    ```sh
@@ -19,26 +33,92 @@ This plugin provides a (currently minimal) set of Helix keybindings for Zsh.
    source $HOME/zshelix/zshelix.plugin.zsh
    ```
 
-### Using a Plugin Manager
+### With a plugin manager
 
-TODO
+- [antidote](https://github.com/mattmc3/antidote): add `thomasschafer/zshelix` to your `.zsh_plugins.txt`.
+- [zinit](https://github.com/zdharma-continuum/zinit): `zinit light thomasschafer/zshelix`
+- [zplug](https://github.com/zplug/zplug): `zplug "thomasschafer/zshelix"`
+- [sheldon](https://github.com/rossmacarthur/sheldon): `sheldon add zshelix --github thomasschafer/zshelix`
+- [Oh My Zsh](https://ohmyz.sh): clone the repository into `$ZSH_CUSTOM/plugins/zshelix` and add `zshelix` to `plugins`.
+
+### Other plugins
+
+Load zshelix before plugins that wrap zle widgets, such as [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) and [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions). Bindings that other plugins (fzf, atuin and so on) add to the `viins` keymap are kept, since zshelix uses `viins` for insert mode.
+
+To accept autosuggestions with the arrow and End keys in insert mode, add zshelix's widgets to the accept list:
+
+```sh
+ZSH_AUTOSUGGEST_ACCEPT_WIDGETS+=(zhm_move_char_right zhm_goto_line_end_newline)
+```
+
+
+## Differences from Helix
+
+A command line isn't a file, so a few things work differently:
+
+- Enter runs the command line in normal, select and insert mode. Use `Ctrl-j` to insert a newline.
+- Tab completes in insert mode, `Ctrl-r` and `Ctrl-s` search history, `Ctrl-l` clears the screen, `Ctrl-p` and `Ctrl-n` move through history, and `Ctrl-d` on an empty line exits the shell. In normal mode, `Ctrl-d` otherwise moves down half a page as in Helix, and in insert mode deletes the next character.
+- Moving up from the first line (`k` or Up) or down from the last line goes to the previous or next history entry, keeping the cursor's column. Set `ZHM_HISTORY_NAVIGATION=0` to turn this off.
+- The text starts out as if it ended with a newline, as files usually do, so the cursor can sit after the last character (`gl`, `x` and `A` all behave as they do on the last line of a file).
+- `:w`, `:x` and `:wq` run the command line, and `:q` abandons it.
+- Without tree-sitter there's no syntax awareness: indentation, bracket matching (`mm`) and the closest-pair text objects use Helix's plain-text behaviour, which is what Helix does in a file with no language. Indentation defaults to two spaces (Helix's setting for shell scripts), and is detected from the text when there is some.
+- Features that need files, buffers, windows, language servers, tree-sitter or a debugger aren't available: pickers, `gd` and other goto-definition commands, `=`, `Alt-o` and the other syntax tree commands, `]f` and the other syntax-based text objects and motions, diagnostics, `Ctrl-w` window commands and scrolling the view.
+- `Ctrl-s` (commit undo checkpoint in insert mode) needs flow control turned off with `unsetopt flow_control`, otherwise the terminal intercepts it.
+- `Ctrl-c` and `Ctrl-z` are handled by the terminal (interrupt and suspend), so `Ctrl-c` doesn't toggle comments; use `space c`.
+- Shell commands (`|`, `!` and so on) run with `sh -c`, as in Helix. Set `ZHM_SHELL` to use something else.
 
 
 ## Configuration
 
-Ensure that any configuration happens before the plugin is initialised, i.e. that any configuration lines are above the line in your `.zshrc` in which you `source` the plugin.
+Set these before sourcing zshelix.
 
-### Cursor styles
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ZHM_INITIAL_MODE` | `insert` | Mode for each new command line: `insert` or `normal`. |
+| `ZHM_CURSOR_NORMAL` | `$ZHM_CURSOR_BLOCK` | Escape sequence to set the cursor in normal mode. |
+| `ZHM_CURSOR_INSERT` | `$ZHM_CURSOR_BEAM` | Escape sequence to set the cursor in insert mode. |
+| `ZHM_CURSOR_SELECT` | `$ZHM_CURSOR_BAR` | Escape sequence to set the cursor in select mode. |
+| `ZHM_STYLE_SELECTION` | `bg=238` | Highlight for selections (in zsh's `region_highlight` format). |
+| `ZHM_STYLE_PRIMARY_SELECTION` | `bg=240` | Highlight for the primary selection. |
+| `ZHM_STYLE_CURSOR` | `bg=250,fg=black` | Highlight for the cursors of selections other than the primary one. |
+| `ZHM_DEFAULT_YANK_REGISTER` | `"` | Register used by `y`, `p`, `d` and `c` when none is selected. `ZSH_HELIX_SYSTEM_CLIPBOARD=1` sets this to `+`, the system clipboard. |
+| `ZHM_CLIPBOARD_PROVIDER` | detected | One of `pasteboard`, `wayland`, `xclip`, `xsel`, `win32yank`, `tmux` or `termcode` (OSC 52, copy only). |
+| `ZHM_CLIPBOARD_COPY`, `ZHM_CLIPBOARD_PASTE` | unset | Commands (as arrays) to copy from standard input and paste to standard output, for a clipboard tool zshelix doesn't know about. Both must be set. |
+| `ZHM_INDENT_WIDTH` | `2` | Spaces per indent, or `0` for tabs. |
+| `ZHM_TAB_WIDTH` | `8` | Width of a tab, for vertical movement and indentation. |
+| `ZHM_AUTO_PAIRS` | `1` | Insert closing brackets and quotes automatically. |
+| `ZHM_SEARCH_WRAP_AROUND` | `1` | Searches wrap around the end of the text. |
+| `ZHM_HISTORY_NAVIGATION` | `1` | Move through history from the first and last lines. |
+| `ZHM_HISTORY_PREV_WIDGET` | `up-history` | Widget used to go to the previous history entry (for example `up-line-or-beginning-search`). |
+| `ZHM_HISTORY_NEXT_WIDGET` | `down-history` | Widget used to go to the next history entry. |
+| `ZHM_ACCEPT_LINE_WIDGET` | `accept-line` | Widget used to run the command line. |
+| `ZHM_COMMENT_TOKEN` | `#` | Token used by the comment commands. |
+| `ZHM_SHELL` | `(sh -c)` | Command (as an array) used to run shell commands. |
+| `ZHM_KEYTIMEOUT` | `1` | Value for zsh's `KEYTIMEOUT`, in hundredths of a second. A short timeout makes Escape responsive. |
 
-To configure the cursor styles in each mode you can override the following three values (updating the string values as required):
+For example, for a block cursor in every mode with a different colour for each:
 
-```
+```sh
 ZHM_CURSOR_NORMAL=$'\e[2 q\e]12;#b8c0e0\a'
 ZHM_CURSOR_INSERT=$'\e[2 q\e]12;#f4dbd6\a'
 ZHM_CURSOR_SELECT=$'\e[2 q\e]12;#f5a97f\a'
 ```
 
-You can also use `$ZHM_CURSOR_BLOCK`, `$ZHM_CURSOR_BEAM` and `$ZHM_CURSOR_BAR` as values for block, beam and bar cursors respectively.
+`$ZHM_CURSOR_BLOCK`, `$ZHM_CURSOR_BEAM` and `$ZHM_CURSOR_BAR` can be used as values for block, beam and bar cursors.
+
+The current mode is available as `$ZHM_MODE` (`normal`, `insert` or `select`), for example to show it in a prompt. If a function called `zhm_mode_changed` exists, it's called with the old and new modes whenever the mode changes.
+
+### Keybindings
+
+After sourcing zshelix, bindings can be changed with `zhm_bind`, which takes a mode, keys in Helix's notation and a command name:
+
+```sh
+zhm_bind normal 'C-e' goto_line_end
+zhm_bind insert 'C-a' goto_line_start
+zhm_bind normal 'g a' select_all  # within an existing menu
+```
+
+Every command is also a zle widget called `zhm_<command>`, so `bindkey` works too, e.g. `bindkey -M viins '^E' zhm_goto_line_end_newline`. The keymaps are `zhm-normal`, `zhm-select` and `viins`.
 
 
 ## Keybindings
@@ -46,6 +126,17 @@ You can also use `$ZHM_CURSOR_BLOCK`, `$ZHM_CURSOR_BEAM` and `$ZHM_CURSOR_BAR` a
 <!-- KEYBINDINGS -->
 
 
+## Tests
+
+The tests in `tests/` are differential: each case gives a starting text and keys, and the result (the text, every selection with its direction, the primary selection and the mode) is compared against Helix's result for the same keys. Helix's results are recorded in `tests/expected.json`, so running the tests only needs zsh and Python:
+
+```sh
+tests/run.py
+```
+
+With Helix installed, `tests/run.py --record` records results for new cases, and `tests/fuzz.py` runs random key sequences in both Helix and zsh and minimises any differences it finds.
+
+
 ## Similar projects
 
-[zsh-helix-mode](https://github.com/Multirious/zsh-helix-mode) also provides Helix keybindings for Zsh, and (at the time of writing) has many more features.
+[zsh-helix-mode](https://github.com/Multirious/zsh-helix-mode) also provides Helix keybindings for zsh.

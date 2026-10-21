@@ -58,3 +58,11 @@ text: x\n
 ?$<ret>
 text: a\n
 ]<space>a<A-d>(
+text: echo "hello world" | grep -o 'o' && ls -la\n
+ax<right><A-d><esc>g.<esc><esc>
+text: echo "hello world" | grep -o 'o' && ls -la\n
+ax<right><A-d><esc>g.
+ax<esc>g.
+wd<esc>g.
+%sl<ret>cX<esc>g.
+xdg.

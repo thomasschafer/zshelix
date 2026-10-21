@@ -115,7 +115,9 @@ typeset -g _zhm_clip_tool=""
 
 function _zhm_clipboard_detect() {
     [[ -n $_zhm_clip_tool ]] && return 0
-    if [[ -n $ZHM_CLIPBOARD_PROVIDER ]]; then
+    if (( ${#ZHM_CLIPBOARD_COPY} && ${#ZHM_CLIPBOARD_PASTE} )); then
+        _zhm_clip_tool=custom
+    elif [[ -n $ZHM_CLIPBOARD_PROVIDER ]]; then
         _zhm_clip_tool=$ZHM_CLIPBOARD_PROVIDER
     elif [[ $OSTYPE == darwin* ]] && (( $+commands[pbcopy] )); then
         _zhm_clip_tool=pasteboard
@@ -140,6 +142,7 @@ function _zhm_clipboard_copy() {
     local primary=0
     [[ $1 == '*' ]] && primary=1
     case $_zhm_clip_tool in
+        (custom) print -rn -- "$2" | "${ZHM_CLIPBOARD_COPY[@]}" ;;
         (pasteboard) print -rn -- "$2" | pbcopy ;;
         (wayland)
             if (( primary )); then
@@ -168,6 +171,7 @@ function _zhm_clipboard_paste() {
     local primary=0
     [[ $1 == '*' ]] && primary=1
     case $_zhm_clip_tool in
+        (custom) "${ZHM_CLIPBOARD_PASTE[@]}" ;;
         (pasteboard) pbpaste ;;
         (wayland)
             if (( primary )); then

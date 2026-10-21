@@ -1,0 +1,12 @@
+# Bracketed paste from the terminal.
+text: ab
+<paste:XY>
+a<paste:XY><esc>
+i<paste:XY><esc>
+v<paste:XY>
+<paste:XY>u
+a<paste:XY><esc>u
+<paste:line\n>
+a<paste:two\nlines><esc>
+%sa|b<ret><paste:Z>
+%sa|b<ret>i<paste:Z><esc>

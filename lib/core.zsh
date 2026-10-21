@@ -446,13 +446,34 @@ function _zhm_apply_changes() {
     fi
     new+=${_zhm_text:$last}
     _zhm_compose_insert
+    local -i was_dirty=$_zhm_dirty
     _zhm_history_begin_change
     local -a sa sh
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_map_range ${_zhm_sa[i]} ${_zhm_sh[i]}
         sa+=( $_zhm_ra ) sh+=( $_zhm_rh )
     done
-    _zhm_last_edit=$(( _zhm_cf[1] + ${#_zhm_cx[1]} ))
+    # Position for `g.` (Helix's `last_edit_pos`): the end of the change
+    # overlapping the primary selection (or the first change) in a revision,
+    # mapped through later changes in the same revision.
+    if (( ! was_dirty )); then
+        local -i pa=${_zhm_sa[_zhm_pi]} ph=${_zhm_sh[_zhm_pi]} k pick=1 delta=0
+        local -i pf=$(( pa < ph ? pa : ph )) pt=$(( pa < ph ? ph : pa ))
+        for (( k = 1; k <= ${#_zhm_cf}; k++ )); do
+            local -i f=${_zhm_cf[k]} t=${_zhm_ct[k]}
+            if (( f == pf || (t > pf && pt > f) )); then
+                pick=$k
+                break
+            fi
+        done
+        for (( k = 1; k < pick; k++ )); do
+            (( delta += ${#_zhm_cx[k]} - (_zhm_ct[k] - _zhm_cf[k]) ))
+        done
+        _zhm_last_edit=$(( _zhm_cf[pick] + delta + ${#_zhm_cx[pick]} ))
+    else
+        _zhm_map_pos $_zhm_last_edit after
+        _zhm_last_edit=$REPLY
+    fi
     _zhm_set_text_raw "$new"
     _zhm_sa=( "${sa[@]}" ) _zhm_sh=( "${sh[@]}" )
     _zhm_scol=( "${(@)_zhm_sa/*/-1}" )

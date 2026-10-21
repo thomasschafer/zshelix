@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  docs:
+    name: Verify README matches keybindings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+
+      - name: Build readme
+        run: ./utils/build-readme.zsh
+
+      - name: Check for documentation changes
+        run: |
+          git diff
+          git diff-files --quiet || (
+            echo "README.md is out of sync with utils/README.md.template or lib/keymap.zsh"
+            echo "Run ./utils/build-readme.zsh, commit the changes and push again"
+            exit 1
+          )
+
+  test:
+    name: Tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install zsh (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh
+
+      # Homebrew's zsh is built with PCRE support.
+      - name: Install zsh (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install zsh
+          echo "$(brew --prefix)/bin" >> "$GITHUB_PATH"
+
+      - name: Check zsh has PCRE support
+        run: zsh -c 'zmodload zsh/pcre && echo "zsh $ZSH_VERSION with PCRE"'
+
+      - name: Run tests
+        run: python3 tests/run.py -j 4
