@@ -76,10 +76,6 @@ function _zhm_store_text() {
     BUFFER=${_zhm_text%$'\n'}
 }
 
-function _zhm_line_count() {
-    REPLY=${#_zhm_lines}
-}
-
 # Line index (0-based) containing position $1.
 function _zhm_line_of() {
     local -i pos=$1 i
@@ -112,16 +108,6 @@ function _zhm_line_next_start() {
     else
         REPLY=$_zhm_len
     fi
-}
-
-# Substring [from, to).
-function _zhm_slice() {
-    REPLY=${_zhm_text:$1:$(( $2 - $1 ))}
-}
-
-# Character at position $1 (empty at the end of the text).
-function _zhm_char() {
-    REPLY=${_zhm_chars[$1 + 1]}
 }
 
 ### Characters ###
@@ -163,10 +149,6 @@ function _zhm_char_width() {
 }
 
 ### Ranges ###
-
-function _zhm_next_boundary() {
-    REPLY=$(( $1 < _zhm_len ? $1 + 1 : _zhm_len ))
-}
 
 function _zhm_prev_boundary() {
     REPLY=$(( $1 > 0 ? $1 - 1 : 0 ))
@@ -227,10 +209,6 @@ function _zhm_with_direction() {
 }
 
 ### Selections ###
-
-function _zhm_sel_count() {
-    REPLY=${#_zhm_sa}
-}
 
 function _zhm_primary_cursor() {
     _zhm_cursor ${_zhm_sa[_zhm_pi]} ${_zhm_sh[_zhm_pi]}

@@ -1,9 +1,5 @@
 # Movement and selection commands, ported from `helix_term::commands`.
 
-function _zhm_is_select() {
-    [[ $_zhm_mode == select ]]
-}
-
 function _zhm_extend_flag() {
     if [[ $_zhm_mode == select ]]; then REPLY=1; else REPLY=0; fi
 }
@@ -407,9 +403,6 @@ function _zhm_goto_window_impl() {
     _zhm_extend_flag
     _zhm_transform _zhm_t_put $REPLY $REPLY
 }
-function _zhm_t_put_line() {
-    _zhm_put_cursor $1 $2 $3 $4
-}
 function _zhm_cmd_goto_window_top() { _zhm_goto_window_impl top }
 function _zhm_cmd_goto_window_center() { _zhm_goto_window_impl center }
 function _zhm_cmd_goto_window_bottom() { _zhm_goto_window_impl bottom }
@@ -556,6 +549,11 @@ function _zhm_cmd_extend_line() {
     _zhm_transform _zhm_t_extend_line $(( h >= a )) $REPLY
 }
 
+# Start of line $1, or the end of the text past the last line.
+function _zhm_line_to_char_sat() {
+    if (( $1 >= ${#_zhm_lines} )); then REPLY=$_zhm_len; else _zhm_line_start $1; fi
+}
+
 function _zhm_t_select_line() {
     local -i anchor=$1 head=$2 below=$3 count=$4 sl el start end nlines=${#_zhm_lines}
     _zhm_line_range $anchor $head
@@ -575,9 +573,6 @@ function _zhm_t_select_line() {
     else
         (( al = el, hl = sl + count > nlines ? nlines : sl + count ))
     fi
-    _zhm_line_to_char_sat() {
-        if (( $1 >= nlines )); then REPLY=$_zhm_len; else _zhm_line_start $1; fi
-    }
     local -i plus_a=$(( al + 1 > nlines ? nlines : al + 1 )) plus_h=$(( hl + 1 > nlines ? nlines : hl + 1 ))
     if (( al < hl )); then
         _zhm_line_to_char_sat $al; _zhm_ra=$REPLY

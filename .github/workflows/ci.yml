@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install zsh
         run: |
@@ -40,7 +40,7 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install zsh (Linux)
         if: runner.os == 'Linux'
