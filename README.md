@@ -62,7 +62,7 @@ A command line isn't a file, so a few things work differently:
 
 - Enter runs the command line in normal, select and insert mode. Use `Ctrl-j` to insert a newline.
 - Tab completes in insert mode, `Ctrl-r` searches history, `Ctrl-l` clears the screen, `Ctrl-p` and `Ctrl-n` move through history, and `Ctrl-d` on an empty line exits the shell. In normal mode, `Ctrl-d` otherwise moves down half a page as in Helix, and in insert mode deletes the next character.
-- Moving up from the first line (`k` or Up) or down from the last line goes to the previous or next history entry, keeping the cursor's column. Set `ZHM_HISTORY_NAVIGATION=0` to turn this off.
+- Moving up from the first line (`k` or Up) or down from the last line goes to the previous or next history entry, keeping the cursor's column. At the ends of the history the cursor stays put. Set `ZHM_HISTORY_NAVIGATION=0` to turn this off.
 - The text starts out as if it ended with a newline, as files usually do, so the cursor can sit after the last character (`gl`, `x` and `A` all behave as they do on the last line of a file).
 - `:w`, `:x` and `:wq` run the command line, and `:q` abandons it.
 - Without tree-sitter there's no syntax awareness: indentation, bracket matching (`mm`) and the closest-pair text objects use Helix's plain-text behaviour, which is what Helix does in a file with no language. Indentation defaults to two spaces (Helix's setting for shell scripts), and is detected from the text when there is some.

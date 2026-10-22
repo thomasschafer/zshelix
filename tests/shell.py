@@ -44,6 +44,9 @@ CASES = [
     ("history: up in insert mode", "\n", "i<up>", "INS", "echo second line«\n¦‡»", "", HISTORY),
     ("history: Ctrl-p in normal mode", "\n", "<C-p>", "NOR", "«e¦‡»cho second line\n", "", HISTORY),
     ("history: k moves within a multi-line buffer", "one\ntwo\n", "jk", "NOR", "«o¦‡»ne\ntwo\n", "", HISTORY),
+    ("history: j at the bottom stays put", "one\ntwo\n", "jlj", "NOR", "one\nt«w¦‡»o\n", "", HISTORY),
+    ("history: j at the bottom of one line stays put", "abc\n", "llj", "NOR", "ab«c¦‡»\n", "", HISTORY),
+    ("history: k at the oldest entry stays put", "\n", "kkkl", "NOR", "e«c¦‡»ho first\n", "", HISTORY),
     ("history: off when disabled", "\n", "k", "NOR", "«\n¦‡»", "", HISTORY + "ZHM_HISTORY_NAVIGATION=0"),
     ("clipboard: space y and space p", "hello world\n", "w<space>yb<space>p", "NOR", "hello ¦‡«hello »world\n", CLIPBOARD, ""),
     ("clipboard: y with ZSH_HELIX_SYSTEM_CLIPBOARD", "hello world\n", "wyb<space>P", "NOR", "¦‡«hello »hello world\n",
@@ -92,6 +95,34 @@ ACCEPT_CASES = [
 ]
 
 
+# Count zshelix's region_highlight entries, which must not pile up as
+# selections move.
+HIGHLIGHTS = r"""
+function _test_count() { print -r -- ${#${(M)region_highlight:#*zshelix*}} >| $ZHM_TEST_RAN; }
+zle -N _test_count
+bindkey -M zhm-normal '\e[15~' _test_count
+"""
+
+
+def run_highlight_cases():
+    failures = []
+    d = tempfile.mkdtemp(prefix="zhm-hl-")
+    out = os.path.join(d, "count")
+    for name, keys, expect in [
+        # Two selections: each has a selection highlight, and the secondary
+        # one a cursor highlight.
+        ("highlights don't pile up as cursors move", "C" + "l" * 6 + "<F5>", "3"),
+        ("highlights go when selections are removed", "Clll,<F5>", "1"),
+    ]:
+        if os.path.exists(out):
+            os.remove(out)
+        harness.run_zsh("hello world\nhello world\n", keys, env_extra={"ZHM_TEST_RAN": out}, rc_after=HIGHLIGHTS)
+        got = open(out).read().strip() if os.path.exists(out) else ""
+        if got != expect:
+            failures.append((name, expect, got))
+    return failures
+
+
 def run_accept_cases():
     """Running the command line, and Ctrl-d on an empty line."""
     failures = []
@@ -117,10 +148,10 @@ def main():
             print(f"FAIL {name}")
             print(f"  expected ({want[0]}): {want[1]!r}")
             print(f"  got      ({got[0]}): {got[1]!r}")
-    for name, want, got in run_accept_cases():
+    for name, want, got in run_accept_cases() + run_highlight_cases():
         failures += 1
         print(f"FAIL {name}\n  expected: {want!r}\n  got:      {got!r}")
-    total = len(CASES) + len(ACCEPT_CASES)
+    total = len(CASES) + len(ACCEPT_CASES) + 2
     print(f"{total - failures}/{total} passed")
     return 1 if failures else 0
 

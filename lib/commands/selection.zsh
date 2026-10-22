@@ -66,7 +66,11 @@ function _zhm_history_navigate() {
     else
         widget=${ZHM_HISTORY_PREV_WIDGET:-up-history}
     fi
-    zle $widget || return 1
+    local -i before=$HISTNO
+    # At either end of the history there's nowhere to go, so stay put. Some
+    # widgets report success there without moving, so check HISTNO too.
+    zle $widget || return 0
+    (( HISTNO == before )) && return 0
     _zhm_load_text
     _zhm_detect_indent
     _zhm_history_reset

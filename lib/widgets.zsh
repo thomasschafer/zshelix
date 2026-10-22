@@ -106,9 +106,7 @@ function _zhm_render() {
     local -i n=${#BUFFER} i from to c
     _zhm_primary_cursor
     CURSOR=$(( REPLY > n ? n : REPLY ))
-    if (( ${#_zhm_hl} )); then
-        region_highlight=( "${(@)region_highlight:|_zhm_hl}" )
-    fi
+    _zhm_remove_highlight
     _zhm_hl=()
     local style="" memo=""
     [[ -n $_zhm_memo ]] && memo=" $_zhm_memo"
@@ -134,15 +132,27 @@ function _zhm_render() {
         fi
     done
     region_highlight+=( "${_zhm_hl[@]}" )
+    # zsh normalises entries (e.g. reordering `bg=` and `fg=`), so remember
+    # them as stored, or they can't be found to remove them later.
+    if (( ${#_zhm_hl} )); then
+        _zhm_hl=( "${(@)region_highlight[-${#_zhm_hl},-1]}" )
+    fi
     _zhm_buf=$BUFFER
     _zhm_cur=$CURSOR
 }
 
 function _zhm_clear_highlight() {
-    if (( ${#_zhm_hl} )); then
+    _zhm_remove_highlight
+    _zhm_hl=()
+}
+
+# Remove our entries from region_highlight.
+function _zhm_remove_highlight() {
+    if [[ -n $_zhm_memo ]]; then
+        region_highlight=( "${(@)region_highlight:#*$_zhm_memo}" )
+    elif (( ${#_zhm_hl} )); then
         region_highlight=( "${(@)region_highlight:|_zhm_hl}" )
     fi
-    _zhm_hl=()
 }
 
 ### Synchronisation ###
