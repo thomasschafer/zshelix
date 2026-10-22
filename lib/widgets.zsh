@@ -43,12 +43,48 @@ typeset -g _ZHM_KEY_REPLAY_END=$'\e[9997~'
 
 ### Messages ###
 
-function _zhm_status() {
+# Show message $1 below the command line. Redisplay without the previous
+# message first: replacing a multi-line message (such as a menu popup) with
+# another one directly can leave zsh redrawing the new message over the prompt
+# later on.
+function _zhm_message() {
+    [[ -n $_zhm_msg ]] && _zhm_clear_message
     zle -M -- "$1"
+    _zhm_msg=$1
+    _zhm_repaint
+}
+
+# Remove the message, redisplaying straight away (see _zhm_message).
+function _zhm_clear_message() {
+    zle -M ""
+    zle -R
+    _zhm_msg=""
+    _zhm_repaint
+}
+
+# Make the next redisplay repaint every character of the line. When a message
+# appears or disappears, zsh redraws the line in a way that loses a
+# character's background colour where a bold highlight (as from
+# zsh-syntax-highlighting) ends inside a selection. Redrawing once without any
+# highlights avoids it.
+function _zhm_repaint() {
+    local -a saved
+    saved=( "${region_highlight[@]}" )
+    region_highlight=()
+    zle -R
+    region_highlight=( "${saved[@]}" )
+}
+
+# The message currently shown, if any. As in Helix, a message lasts until the
+# next key.
+typeset -g _zhm_msg=""
+
+function _zhm_status() {
+    _zhm_message "$1"
 }
 
 function _zhm_error() {
-    zle -M -- "$1"
+    _zhm_message "$1"
 }
 
 ### Count and register ###
@@ -178,6 +214,7 @@ function _zhm_sync() {
 function _zhm_widget() {
     emulate -L zsh
     setopt extended_glob typeset_silent
+    [[ -n $_zhm_msg ]] && _zhm_clear_message
     _zhm_sync
     _zhm_record_key "$KEYS"
     _zhm_run ${WIDGET#zhm_}
@@ -416,7 +453,7 @@ function _zhm_show_info() {
     shift
     local -a lines=()
     lines=( "$title" "$@" )
-    zle -M -- "${(pj:\n:)lines}"
+    _zhm_message "${(pj:\n:)lines}"
     zle -R
 }
 
@@ -432,14 +469,17 @@ function _zhm_prompt() {
     local -i pos=0 hist=0
     local -a history=()
     [[ -n $reg ]] && _zhm_reg_read "$reg" && history=( "${reply[@]}" )
+    _zhm_clear_message
     while :; do
         zle -M -- "$prompt${input[1,pos]}▏${input[pos+1,-1]}"
+        _zhm_msg=$prompt
+        _zhm_repaint
         zle -R
         _zhm_read_key
         key=$REPLY
         case $key in
             ($'\r'|$'\n')
-                zle -M ""
+                _zhm_clear_message
                 if [[ -z $input ]]; then
                     input=${history[1]}
                 elif [[ -n $reg && $input != "${history[1]}" ]]; then
@@ -449,12 +489,12 @@ function _zhm_prompt() {
                 return 0
                 ;;
             ($'\e'|$'\a')
-                zle -M ""
+                _zhm_clear_message
                 return 1
                 ;;
             ($'\x7f'|$'\b')
                 if [[ -z $input ]]; then
-                    zle -M ""
+                    _zhm_clear_message
                     return 1
                 fi
                 if (( pos > 0 )); then

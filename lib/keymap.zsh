@@ -279,19 +279,20 @@ function _zhm_menu_info_lines() {
 function _zhm_menu_widget() {
     emulate -L zsh
     setopt extended_glob typeset_silent
+    [[ -n $_zhm_msg ]] && _zhm_clear_message
     _zhm_sync
     _zhm_record_key "$KEYS"
     local p=$KEYS mode=$_zhm_mode
     while :; do
         if ! _zhm_lookup $mode "$p"; then
-            zle -M ""
+            _zhm_clear_message
             _zhm_count=0 _zhm_register=""
             return 0
         fi
         local entry=$REPLY lookup_mode=$REPLY2
         case $entry in
             (cmd:*)
-                zle -M ""
+                _zhm_clear_message
                 _zhm_run ${entry#cmd:}
                 return
                 ;;
@@ -309,7 +310,7 @@ function _zhm_menu_widget() {
                 fi
                 if ! _zhm_lookup $mode "$p$_ZHM_SEP$key"; then
                     local fallback=${_zhm_km_fallback[$lookup_mode$_ZHM_MSEP$p]}
-                    zle -M ""
+                    _zhm_clear_message
                     if [[ -n $fallback ]] && _zhm_key_char "$key"; then
                         _zhm_run $fallback "$REPLY"
                     else

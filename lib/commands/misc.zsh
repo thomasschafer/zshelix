@@ -304,7 +304,7 @@ function _zhm_cmd_select_register() {
     _zhm_show_info "Select register" "${lines[@]}"
     _zhm_read_char
     local -i ok=$?
-    zle -M ""
+    _zhm_clear_message
     (( ok == 0 )) && _zhm_register=$REPLY
     return 0
 }

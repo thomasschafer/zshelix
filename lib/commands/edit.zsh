@@ -735,7 +735,7 @@ function _zhm_cmd_surround_add() {
     _zhm_show_info "Surround selections with" "( or )  Parentheses" "{ or }  Curly braces" "< or >  Angled brackets" "[ or ]  Square brackets" "        ... or any character"
     _zhm_read_char
     local -i ok=$?
-    zle -M ""
+    _zhm_clear_message
     (( ok == 0 )) || return 0
     local open="" close=""
     if [[ $REPLY == $'\n' ]]; then
@@ -787,7 +787,7 @@ function _zhm_get_surround_pos() {
 
 function _zhm_surround_read_target() {
     _zhm_read_key
-    zle -M ""
+    _zhm_clear_message
     # Enter isn't a character here, unlike for `r` and `ms`.
     [[ $REPLY == $'\r' ]] && return 1
     _zhm_key_char "$REPLY" || return 1
@@ -830,7 +830,7 @@ function _zhm_cmd_surround_replace() {
     _zhm_render
     _zhm_show_info "Replace with a pair of" "( or )  Parentheses" "{ or }  Curly braces" "< or >  Angled brackets" "[ or ]  Square brackets" "        ... or any character"
     _zhm_read_key
-    zle -M ""
+    _zhm_clear_message
     local key=$REPLY
     _zhm_selection_restore "$saved"
     [[ $key == $'\r' ]] && return 0

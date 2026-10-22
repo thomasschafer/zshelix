@@ -56,6 +56,7 @@ typeset -g ZHM_CURSOR_BAR=$'\e[4 q'
 function _zhm_line_init() {
     emulate -L zsh
     setopt extended_glob typeset_silent
+    _zhm_redraw_hook_last
     _zhm_load_text
     _zhm_detect_indent
     _zhm_history_reset
@@ -74,7 +75,33 @@ function _zhm_line_pre_redraw() {
     if [[ $BUFFER != "$_zhm_buf" ]] || (( CURSOR != _zhm_cur )); then
         _zhm_sync
         _zhm_render
+    elif (( ${#_zhm_hl} )) && [[ ${(j:\0:)${(@)region_highlight[-${#_zhm_hl},-1]}} != ${(j:\0:)_zhm_hl} ]]; then
+        # Later entries in region_highlight take precedence, so keep ours at
+        # the end, after other highlighters (such as zsh-syntax-highlighting,
+        # whose entries for plain text would otherwise hide selections).
+        _zhm_remove_highlight
+        region_highlight+=( "${_zhm_hl[@]}" )
     fi
+}
+
+# Run our zle-line-pre-redraw hook after those of plugins loaded later, so
+# that our highlights are added last. add-zle-hook-widget runs hooks in the
+# order of their numeric prefixes.
+function _zhm_redraw_hook_last() {
+    local -a hooks others
+    zstyle -a zle-line-pre-redraw widgets hooks || return 0
+    local hook
+    local -i max=0 ours=0
+    for hook in "${hooks[@]}"; do
+        if [[ ${hook#<->:} == _zhm_line_pre_redraw ]]; then
+            ours=${hook%%:*}
+        else
+            others+=( "$hook" )
+            [[ ${hook%%:*} == <-> ]] && (( ${hook%%:*} > max )) && max=${hook%%:*}
+        fi
+    done
+    (( ours > max )) && return 0
+    zstyle zle-line-pre-redraw widgets "${others[@]}" "$(( max + 1 )):_zhm_line_pre_redraw"
 }
 
 function _zhm_line_finish() {

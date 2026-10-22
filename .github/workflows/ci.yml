@@ -60,3 +60,13 @@ jobs:
 
       - name: Run tests
         run: ZHM_TEST_ESC_DELAY=0.2 python3 tests/run.py -j 3 && ZHM_TEST_ESC_DELAY=0.2 python3 tests/shell.py
+
+      - name: Run visual tests
+        run: |
+          python3 -m venv /tmp/venv
+          /tmp/venv/bin/pip install -q pyte
+          git clone -q --depth 1 https://github.com/zsh-users/zsh-syntax-highlighting /tmp/plugins/zsh-syntax-highlighting
+          git clone -q --depth 1 https://github.com/zsh-users/zsh-autosuggestions /tmp/plugins/zsh-autosuggestions
+          export ZHM_TEST_ESC_DELAY=0.2
+          /tmp/venv/bin/python tests/visual.py -n 60 --seed 1 -j 3
+          /tmp/venv/bin/python tests/visual.py -n 60 --seed 2 -j 3 --plugins /tmp/plugins

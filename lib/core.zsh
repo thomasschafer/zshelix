@@ -43,6 +43,7 @@ function _zhm_bug() {
     local msg="zshelix internal error: $*"
     if zle; then
         zle -M -- "$msg"
+        _zhm_msg=$msg
     else
         print -ru2 -- "$msg"
     fi

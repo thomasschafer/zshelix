@@ -417,6 +417,8 @@ tests/run.py
 
 With Helix installed, `tests/run.py --record` records results for new cases, and `tests/fuzz.py` runs random key sequences in both Helix and zsh and minimises any differences it finds.
 
+`tests/visual.py` checks what's actually drawn: it renders zsh's output with a terminal emulator ([pyte](https://github.com/selectel/pyte)) and, after each command in random key sequences, checks that the screen shows the text, selection highlights, cursor and message zshelix expects, with nothing left over. `--plugins DIR` runs it with zsh-syntax-highlighting and zsh-autosuggestions loaded from `DIR`.
+
 
 ## Similar projects
 
