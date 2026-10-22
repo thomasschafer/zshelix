@@ -94,7 +94,7 @@ function _zhm_split_alternatives() {
 # separated by `|` into all raw paths, in $reply.
 function _zhm_expand_path() {
     local -a paths=( "" ) next alts
-    local key alt p r
+    local key="" alt="" p="" r=""
     for key in ${(s: :)1}; do
         next=()
         _zhm_split_alternatives "$key"
@@ -120,6 +120,8 @@ function _zhm_expand_path() {
 # last one are menus; they're created if they don't exist yet. Normal mode
 # bindings also apply in select mode unless select mode overrides them.
 function zhm_bind() {
+    emulate -L zsh
+    setopt extended_glob typeset_silent
     local mode=$1 keys=$2 cmd=$3
     if (( ! ${+functions[_zhm_cmd_$cmd]} )); then
         _zhm_bug "zhm_bind: unknown command '$cmd'"
@@ -127,7 +129,7 @@ function zhm_bind() {
     fi
     _zhm_ensure_menus $mode "$keys" || return 1
     _zhm_expand_path "$keys" || return 1
-    local p
+    local p=""
     for p in "${reply[@]}"; do
         _zhm_km[$mode$_ZHM_MSEP$p]="cmd:$cmd"
         _zhm_bind_top $mode "$p" zhm_$cmd
@@ -140,9 +142,11 @@ function zhm_bind() {
 
 # Remove the binding for key path $2 in mode $1.
 function zhm_unbind() {
+    emulate -L zsh
+    setopt extended_glob typeset_silent
     local mode=$1 keys=$2
     _zhm_expand_path "$keys" || return 1
-    local p keymap
+    local p="" keymap=""
     _zhm_keymap_name $mode; keymap=$REPLY
     for p in "${reply[@]}"; do
         unset "_zhm_km[$mode$_ZHM_MSEP$p]"
@@ -163,10 +167,10 @@ function zhm_unbind() {
 # Create menus for the keys before the last one in path $2, if needed.
 function _zhm_ensure_menus() {
     local mode=$1
-    local -a parts
+    local -a parts=()
     parts=( ${(s: :)2} )
-    local -i i
-    local prefix p
+    local -i i=0
+    local prefix="" p=""
     for (( i = 1; i < ${#parts}; i++ )); do
         prefix=${(j: :)parts[1,i]}
         _zhm_expand_path "$prefix" || return 1
@@ -183,9 +187,11 @@ function _zhm_ensure_menus() {
 # Declare key path $2 in mode $1 as a menu titled $3, optionally with a
 # fallback command $4 that receives any other character.
 function zhm_menu() {
+    emulate -L zsh
+    setopt extended_glob typeset_silent
     local mode=$1 keys=$2 title=$3 fallback=$4
     _zhm_expand_path "$keys" || return 1
-    local p
+    local p=""
     for p in "${reply[@]}"; do
         _zhm_km[$mode$_ZHM_MSEP$p]="menu:$title"
         [[ -n $fallback ]] && _zhm_km_fallback[$mode$_ZHM_MSEP$p]=$fallback
@@ -196,7 +202,7 @@ function zhm_menu() {
 
 function _zhm_add_info() {
     local mode=$1 keys=$2 desc=$3
-    local -a parts
+    local -a parts=()
     parts=( ${(s: :)keys} )
     (( ${#parts} > 1 )) || return 0
     local last=${parts[-1]}
@@ -209,7 +215,7 @@ function _zhm_add_info() {
         local k=$mode$_ZHM_MSEP$p
         # Replace any existing entry for the same key; an empty description
         # removes it.
-        local -a lines
+        local -a lines=()
         lines=( "${(@f)${_zhm_km_info[$k]%$'\n'}}" )
         lines=( "${(@)lines:#${(b)entry} *}" )
         lines=( ${lines:#} )
@@ -226,7 +232,7 @@ function _zhm_add_info() {
 function _zhm_bind_top() {
     local mode=$1 p=$2 widget=$3
     local first=${p%%$_ZHM_SEP*}
-    local keymap
+    local keymap=""
     _zhm_keymap_name $mode; keymap=$REPLY
     # Keys with further keys are menus at the top level.
     [[ $p == *$_ZHM_SEP* ]] && widget=zhm-menu
@@ -257,7 +263,7 @@ function _zhm_menu_info_lines() {
     local text=${_zhm_km_info[$mode$_ZHM_MSEP$p]}
     if [[ $mode == select ]]; then
         # Merge in the normal mode entries that select mode doesn't override.
-        local line
+        local line=""
         for line in "${(@f)${_zhm_km_info[normal$_ZHM_MSEP$p]}}"; do
             [[ -n $line ]] || continue
             local key=${line%% *}

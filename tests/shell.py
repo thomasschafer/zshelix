@@ -59,6 +59,12 @@ CASES = [
     ("insert mode Ctrl-v inserts literally", "x\n", "i<C-v><C-a><esc>", "NOR", "\x01«x¦‡»\n", "", ""),
     ("unbound function key is ignored in normal mode", "abc\n", "l<F5>l", "NOR", "ab«c¦‡»\n", "", ""),
     ("unbound function key is ignored in insert mode", "abc\n", "i<F5>x<esc>", "NOR", "x¦‡«a»bc\n", "", ""),
+    # The whole command line is the "window" for gt, gc and gb.
+    ("gb goes to the last line", "a\nb\nc\nd\n", "gb", "NOR", "a\nb\nc\n«d¦‡»\n", "", ""),
+    ("gc goes to the middle line", "a\nb\nc\nd\n", "gc", "NOR", "a\n«b¦‡»\nc\nd\n", "", ""),
+    ("gt goes to the first line", "a\nb\nc\nd\n", "jjgt", "NOR", "«a¦‡»\nb\nc\nd\n", "", ""),
+    ("2gt goes to the second line", "a\nb\nc\nd\n", "2gt", "NOR", "a\n«b¦‡»\nc\nd\n", "", ""),
+    ("vgb extends to the last line", "a\nb\nc\nd\n", "vgb", "SEL", "«a\nb\nc\nd¦‡»\n", "", ""),
     ("initial mode can be normal", "abc\n", "l", "NOR", "a«b¦‡»c\n", "", ""),
 ]
 
@@ -78,17 +84,20 @@ def run_case(case):
     return name, ok, (want_mode, want), (mode, marked)
 
 
+ACCEPT_CASES = [
+    ("Enter runs the line in insert mode", "iecho hi<ret>", "echo hi\n"),
+    ("Enter runs the line in normal mode", "iecho hi<esc><ret>", "echo hi\n"),
+    (":w runs the line", "iecho hi<esc>:w<ret>", "echo hi\n"),
+    (":q abandons the line", "iecho hi<esc>:q<ret>", ""),
+]
+
+
 def run_accept_cases():
     """Running the command line, and Ctrl-d on an empty line."""
     failures = []
     d = tempfile.mkdtemp(prefix="zhm-accept-")
     ran = os.path.join(d, "ran")
-    for name, keys, expect in [
-        ("Enter runs the line in insert mode", "iecho hi<ret>", "echo hi\n"),
-        ("Enter runs the line in normal mode", "iecho hi<esc><ret>", "echo hi\n"),
-        (":w runs the line", "iecho hi<esc>:w<ret>", "echo hi\n"),
-        (":q abandons the line", "iecho hi<esc>:q<ret>", ""),
-    ]:
+    for name, keys, expect in ACCEPT_CASES:
         if os.path.exists(ran):
             os.remove(ran)
         harness.run_zsh("\n", keys, env_extra={"ZHM_TEST_RAN": ran}, rc_after=PREEXEC)
@@ -111,7 +120,7 @@ def main():
     for name, want, got in run_accept_cases():
         failures += 1
         print(f"FAIL {name}\n  expected: {want!r}\n  got:      {got!r}")
-    total = len(CASES) + 4
+    total = len(CASES) + len(ACCEPT_CASES)
     print(f"{total - failures}/{total} passed")
     return 1 if failures else 0
 

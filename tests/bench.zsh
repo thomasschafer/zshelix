@@ -3,6 +3,7 @@
 #
 #     tests/bench.zsh
 emulate -L zsh
+setopt extended_glob typeset_silent
 zmodload zsh/datetime
 
 source ${0:A:h}/../zshelix.plugin.zsh 2>/dev/null
@@ -50,4 +51,13 @@ for size in 50 200 1000 5000; do
     bench "sync (no change)" 50 _zhm_sync
     setup "$text"
     bench "x then d" 20 eval '_zhm_cmd_extend_line_below; _zhm_cmd_delete_selection; _zhm_history_commit'
+    # A cursor at every word, as after `%s\w+`.
+    setup "$text"
+    _zhm_set_single 0 $_zhm_len
+    _zhm_regex_compile '\w+'
+    _zhm_select_on_matches
+    _zhm_mode=insert
+    bench "typing at ${#_zhm_sa} cursors" 5 _zhm_insert_char x
+    bench "backspace at ${#_zhm_sa} cursors" 5 _zhm_cmd_delete_char_backward
+    bench "w at ${#_zhm_sa} cursors" 5 _zhm_cmd_move_next_word_start
 done

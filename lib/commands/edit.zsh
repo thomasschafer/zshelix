@@ -11,7 +11,7 @@ function _zhm_enter_insert_mode() {
 
 function _zhm_cmd_insert_mode() {
     _zhm_enter_insert_mode
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         _zhm_sa[i]=$(( a < h ? h : a )) _zhm_sh[i]=$(( a < h ? a : h ))
@@ -28,7 +28,7 @@ function _zhm_cmd_append_mode() {
         _zhm_change $_zhm_len $_zhm_len $'\n'
         _zhm_apply_changes
     fi
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -64,7 +64,7 @@ function _zhm_insert_with_indent() {
     local -i was_select=0 i offs=0
     [[ $_zhm_mode == select ]] && was_select=1
     _zhm_enter_insert_mode
-    local -a ranges
+    local -a ranges=()
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} line ls pos
@@ -107,7 +107,7 @@ function _zhm_open() {
     local -i count i offs=0
     _zhm_count_or_1; count=$REPLY
     _zhm_enter_insert_mode
-    local -a ranges
+    local -a ranges=()
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} curr next pos_line_end pos_width
@@ -134,7 +134,7 @@ function _zhm_open() {
             text=$'\n'$indent
         fi
         local repeated=""
-        local -i k
+        local -i k=0
         for (( k = 0; k < count; k++ )); do repeated+=$text; done
         local -i pos=$(( offs + pos_line_end + pos_width ))
         for (( k = 0; k < count; k++ )); do
@@ -158,7 +158,7 @@ function _zhm_cmd_open_above() { _zhm_open above }
 function _zhm_try_restore_indent() {
     (( _zhm_dirty && _zhm_ins_from >= 0 )) || return 0
     [[ $_zhm_ins_text == $'\n'[[:blank:]]# ]] || return 0
-    local -i pos line ls le
+    local -i pos=0 line=0 ls=0 le=0
     _zhm_primary_cursor; pos=$REPLY
     _zhm_line_of $pos; line=$REPLY
     _zhm_line_start $line; ls=$REPLY
@@ -172,7 +172,7 @@ function _zhm_try_restore_indent() {
 ### Deleting and changing ###
 
 function _zhm_selection_is_linewise() {
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -190,7 +190,7 @@ function _zhm_selection_is_linewise() {
 
 function _zhm_selection_fragments() {
     reply=()
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -239,7 +239,7 @@ function _zhm_cmd_replace() {
     _zhm_read_char || return 0
     local ch=$REPLY
     _zhm_changes_reset
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -255,7 +255,7 @@ function _zhm_cmd_replace() {
 function _zhm_switch_case_impl() {
     local mode=$1
     _zhm_changes_reset
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -264,7 +264,7 @@ function _zhm_switch_case_impl() {
             (upper) out=${(U)frag} ;;
             (lower) out=${(L)frag} ;;
             (switch)
-                local c
+                local c=""
                 for c in "${(@s::)frag}"; do
                     if [[ $c == [[:lower:]] ]]; then
                         out+=${(U)c}
@@ -338,14 +338,14 @@ function _zhm_cmd_yank_main_selection_to_primary_clipboard() { _zhm_yank_main_im
 function _zhm_paste_values() {
     local action=$1
     local -i count=$2 i linewise=0
-    local -a values
+    local -a values=()
     values=( "${reply[@]}" )
     (( ${#values} )) || return 0
-    local v
+    local v=""
     for v in "${values[@]}"; do
         [[ $v == *$'\n' ]] && linewise=1
     done
-    local -a mapped
+    local -a mapped=()
     for v in "${values[@]}"; do
         v=${v//$'\r\n'/$'\n'}
         v=${v//$'\r'/$'\n'}
@@ -354,7 +354,7 @@ function _zhm_paste_values() {
         mapped+=( "$out" )
     done
     _zhm_changes_reset
-    local -a ranges
+    local -a ranges=()
     local -i offset=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} pos
@@ -373,7 +373,7 @@ function _zhm_paste_values() {
             (after:0) pos=$to ;;
             (cursor:*) _zhm_cursor $a $h; pos=$REPLY ;;
         esac
-        local value
+        local value=""
         if (( i <= ${#mapped} )); then
             value=${mapped[i]}
         else
@@ -395,7 +395,7 @@ function _zhm_paste_values() {
 
 function _zhm_paste_from_register() {
     local reg=$1 action=$2
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     _zhm_reg_read "$reg" || return 0
     _zhm_paste_values $action $count
@@ -420,11 +420,11 @@ function _zhm_cmd_paste_primary_clipboard_before() { _zhm_paste_from_register '*
 
 function _zhm_replace_with_register() {
     local reg=$1
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     _zhm_reg_read "$reg" || return 0
-    local -a values
-    local v
+    local -a values=()
+    local v=""
     for v in "${reply[@]}"; do
         v=${v//$'\r\n'/$'\n'}
         local out="" k
@@ -437,7 +437,7 @@ function _zhm_replace_with_register() {
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
         (( from == to )) && continue
-        local value
+        local value=""
         if (( vi <= ${#values} )); then value=${values[vi]}; else value=${values[-1]}; fi
         (( vi++ ))
         _zhm_change $from $to "$value"
@@ -460,7 +460,7 @@ function _zhm_paste_bracketed() {
     local action=before
     [[ $_zhm_mode == normal ]] || action=cursor
     reply=( "$content" )
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     if [[ $_zhm_mode == insert ]]; then
         _zhm_history_commit
@@ -478,12 +478,13 @@ function _zhm_cmd_paste_bracketed_input() {
     zle bracketed-paste
     local content=$BUFFER
     BUFFER=$saved_buffer CURSOR=$saved_cursor
+    _zhm_amend_last_key ""
     [[ -n $content ]] || return 0
     _zhm_paste_bracketed "$content"
 }
 
 function _zhm_cmd_insert_register() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     _zhm_read_char || return 0
     _zhm_reg_read "$REPLY" || return 0
@@ -493,7 +494,7 @@ function _zhm_cmd_insert_register() {
 ### Undo ###
 
 function _zhm_cmd_undo() {
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     for (( i = 0; i < count; i++ )); do
         _zhm_history_undo || break
@@ -501,7 +502,7 @@ function _zhm_cmd_undo() {
 }
 
 function _zhm_cmd_redo() {
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     for (( i = 0; i < count; i++ )); do
         _zhm_history_redo || break
@@ -509,7 +510,7 @@ function _zhm_cmd_redo() {
 }
 
 function _zhm_cmd_earlier() {
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     for (( i = 0; i < count; i++ )); do
         _zhm_history_earlier 1 || break
@@ -517,7 +518,7 @@ function _zhm_cmd_earlier() {
 }
 
 function _zhm_cmd_later() {
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     for (( i = 0; i < count; i++ )); do
         _zhm_history_later 1 || break
@@ -534,7 +535,7 @@ function _zhm_cmd_commit_undo_checkpoint() {
 function _zhm_selected_lines() {
     local -A seen
     reply=()
-    local -i i l
+    local -i i=0 l=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_line_range ${_zhm_sa[i]} ${_zhm_sh[i]}
         for (( l = _zhm_ra; l <= _zhm_rh; l++ )); do
@@ -556,7 +557,7 @@ function _zhm_indent_unit() {
 }
 
 function _zhm_cmd_indent() {
-    local -i count l
+    local -i count=0 l=0
     _zhm_count_or_1; count=$REPLY
     _zhm_indent_unit
     local unit=$REPLY indent="" k
@@ -564,7 +565,7 @@ function _zhm_cmd_indent() {
     _zhm_selected_lines
     _zhm_changes_reset
     for l in "${reply[@]}"; do
-        local -i ls le
+        local -i ls=0 le=0
         _zhm_line_start $l; ls=$REPLY
         _zhm_line_next_start $l; le=$REPLY
         local content=${_zhm_text:$ls:$(( le - ls ))}
@@ -582,7 +583,7 @@ function _zhm_cmd_indent() {
 }
 
 function _zhm_cmd_unindent() {
-    local -i count l width
+    local -i count=0 l=0 width=0
     _zhm_count_or_1; count=$REPLY
     local -i iw=$(( _zhm_indent_width > 0 ? _zhm_indent_width : ZHM_TAB_WIDTH ))
     local -i target=$(( count * iw ))
@@ -614,7 +615,7 @@ function _zhm_cmd_unindent() {
 
 function _zhm_join_selections_impl() {
     local -i select_space=$1 i
-    local -a cf ct cx
+    local -a cf=() ct=() cx=()
     local -A seen
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_line_range ${_zhm_sa[i]} ${_zhm_sh[i]}
@@ -623,7 +624,7 @@ function _zhm_join_selections_impl() {
             (( el = el + 1 < ${#_zhm_lines} - 1 ? el + 1 : ${#_zhm_lines} - 1 ))
         fi
         for (( l = sl; l < el; l++ )); do
-            local -i start end
+            local -i start=0 end=0
             _zhm_line_end $l; start=$REPLY
             _zhm_line_start $(( l + 1 )); end=$REPLY
             while (( end < _zhm_len )) && [[ ${_zhm_chars[end + 1]} == (' '|$'\t') ]]; do (( end++ )); done
@@ -638,12 +639,12 @@ function _zhm_join_selections_impl() {
     done
     (( ${#cf} )) || return 0
     # Sort the changes by start position.
-    local -a order
+    local -a order=()
     for (( i = 1; i <= ${#cf}; i++ )); do order+=( "${cf[i]} $i" ); done
     order=( ${(on)order} )
     _zhm_changes_reset
-    local entry
-    local -a ranges
+    local entry=""
+    local -a ranges=()
     local -i offset=0
     for entry in "${order[@]}"; do
         local -i idx=${entry#* }
@@ -668,15 +669,15 @@ function _zhm_cmd_join_selections_space() { _zhm_join_selections_impl 1 }
 
 function _zhm_add_newline_impl() {
     local dir=$1
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     local nl=${(pl:$count::\n:)}
     _zhm_changes_reset
     local -A seen
-    local -a positions
+    local -a positions=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_line_range ${_zhm_sa[i]} ${_zhm_sh[i]}
-        local -i line pos
+        local -i line=0 pos=0
         if [[ $dir == above ]]; then line=$_zhm_ra; else line=$(( _zhm_rh + 1 )); fi
         if (( line >= ${#_zhm_lines} )); then pos=$_zhm_len; else _zhm_line_start $line; pos=$REPLY; fi
         (( ${+seen[$pos]} )) && continue
@@ -695,11 +696,11 @@ function _zhm_reorder_contents() {
     local strategy=$1
     local -i n=${#_zhm_sa} by i
     _zhm_selection_fragments
-    local -a frags
+    local -a frags=()
     frags=( "${reply[@]}" )
     by=$(( _zhm_count > 0 ? (_zhm_count < n ? _zhm_count : n) : 1 ))
-    local -a reordered
-    local -i pi
+    local -a reordered=()
+    local -i pi=0
     case $strategy in
         (forward)
             reordered=( "${(@)frags[n-by+1,n]}" "${(@)frags[1,n-by]}" )
@@ -736,7 +737,7 @@ function _zhm_cmd_surround_add() {
     local -i ok=$?
     zle -M ""
     (( ok == 0 )) || return 0
-    local open close
+    local open="" close=""
     if [[ $REPLY == $'\n' ]]; then
         open=$'\n' close=$'\n'
     else
@@ -744,7 +745,7 @@ function _zhm_cmd_surround_add() {
         open=$REPLY close=$REPLY2
     fi
     _zhm_changes_reset
-    local -a ranges
+    local -a ranges=()
     local -i i offs=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -795,15 +796,15 @@ function _zhm_surround_read_target() {
 }
 
 function _zhm_cmd_surround_delete() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     _zhm_show_info "Delete surrounding pair of" "m       Nearest matching pair" "( or )  Parentheses" "{ or }  Curly braces" "< or >  Angled brackets" "[ or ]  Square brackets" "        ... or any character"
     _zhm_surround_read_target || return 0
     _zhm_get_surround_pos "$REPLY" $count || return 1
-    local -a positions
+    local -a positions=()
     positions=( ${(on)reply} )
     _zhm_changes_reset
-    local p
+    local p=""
     for p in "${positions[@]}"; do
         _zhm_change $p $(( p + 1 )) ""
     done
@@ -812,18 +813,18 @@ function _zhm_cmd_surround_delete() {
 }
 
 function _zhm_cmd_surround_replace() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     _zhm_show_info "Replace surrounding pair of" "m       Nearest matching pair" "( or )  Parentheses" "{ or }  Curly braces" "< or >  Angled brackets" "[ or ]  Square brackets" "        ... or any character"
     _zhm_surround_read_target || return 0
     _zhm_get_surround_pos "$REPLY" $count || return 1
-    local -a positions
+    local -a positions=()
     positions=( "${reply[@]}" )
     _zhm_selection_serialize
     local saved=$REPLY
     # Show the pair being replaced while waiting for the replacement.
-    local -a points
-    local p
+    local -a points=()
+    local p=""
     for p in "${positions[@]}"; do points+=( $p $p ); done
     _zhm_set_selection $(( (_zhm_pi - 1) * 2 + 1 )) "${points[@]}"
     _zhm_render
@@ -836,14 +837,14 @@ function _zhm_cmd_surround_replace() {
     _zhm_key_char "$key" || return 0
     _zhm_get_pair "$REPLY"
     local open=$REPLY close=$REPLY2
-    local -a sorted
-    local -i i
+    local -a sorted=()
+    local -i i=0
     for (( i = 1; i <= ${#positions}; i += 2 )); do
         sorted+=( "${positions[i]} o" "${positions[i + 1]} c" )
     done
     sorted=( ${(on)sorted} )
     _zhm_changes_reset
-    local entry
+    local entry=""
     for entry in "${sorted[@]}"; do
         local -i pos=${entry% *}
         if [[ ${entry#* } == o ]]; then
@@ -863,7 +864,7 @@ function _zhm_cmd_surround_replace() {
 function _zhm_cmd_toggle_comments() {
     local token=${ZHM_COMMENT_TOKEN:-#}
     local -i tlen=${#token} i l min=-1 margin=1 commented=1 min_next=0
-    local -a lines to_change
+    local -a lines=() to_change=()
     local -i nlines=${#_zhm_lines}
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_line_range ${_zhm_sa[i]} ${_zhm_sh[i]}
@@ -913,13 +914,13 @@ function _zhm_increment_integer() {
         (0b*) radix=2 ;;
     esac
     # Separator positions counted from the right.
-    local -a seps
+    local -a seps=()
     local -i i n=${#text}
     for (( i = 0; i < n; i++ )); do
         [[ ${text[n-i]} == _ ]] && seps+=( $i )
     done
     local word=${text//_/}
-    local out
+    local out=""
     if (( radix == 10 )); then
         [[ $word == (-|)<-> ]] || return 1
         # Check the value fits in a 64-bit integer.
@@ -960,7 +961,7 @@ function _zhm_increment_integer() {
         local -i new=$(( value + amount ))
         (( new < 0 )) && new=0
         local -i len=$(( ${#text} - 2 - ${#seps} ))
-        local digits
+        local digits=""
         case $radix in
             (16)
                 local lower=${number//[^a-f]/} upper=${number//[^A-F]/}
@@ -976,7 +977,7 @@ function _zhm_increment_integer() {
         out+=$digits
     fi
     # Reinsert separators.
-    local idx
+    local idx=""
     for idx in "${seps[@]}"; do
         if (( idx < ${#out} )); then
             local -i at=$(( ${#out} - idx ))
@@ -984,7 +985,7 @@ function _zhm_increment_integer() {
         fi
     done
     if (( ${#out} > ${#text} && ${#seps} )); then
-        local -i spacing
+        local -i spacing=0
         if (( ${#seps} >= 2 )); then
             (( spacing = seps[-1] - seps[-2] - 1 ))
         else
@@ -1009,7 +1010,7 @@ function _zhm_increment_date() {
     local text=$1
     local -i amount=$2
     zmodload -F zsh/datetime b:strftime 2>/dev/null || return 1
-    local fmt unit
+    local fmt="" unit=""
     case $text in
         ([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' '[0-9][0-9]:[0-9][0-9]:[0-9][0-9]) fmt='%Y-%m-%d %H:%M:%S' unit=60 ;;
         ([0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9]' '[0-9][0-9]:[0-9][0-9]:[0-9][0-9]) fmt='%Y/%m/%d %H:%M:%S' unit=60 ;;
@@ -1021,7 +1022,7 @@ function _zhm_increment_date() {
         ([0-9][0-9]:[0-9][0-9]) fmt='%H:%M' unit=time ;;
         (*) return 1 ;;
     esac
-    local -i epoch
+    local -i epoch=0
     if [[ $unit == time ]]; then
         local -i h=${text[1,2]} m=${text[4,5]} s=0
         [[ $fmt == *%S ]] && s=${text[7,8]}
@@ -1037,7 +1038,7 @@ function _zhm_increment_date() {
     fi
     TZ=UTC strftime -r -s epoch "$fmt" "$text" 2>/dev/null || return 1
     # Reject dates that don't round-trip (e.g. 2021-02-30).
-    local check
+    local check=""
     TZ=UTC strftime -s check "$fmt" $epoch
     [[ $check == "$text" ]] || return 1
     (( epoch += amount * unit ))
@@ -1050,7 +1051,7 @@ function _zhm_increment_impl() {
     (( amount = sign * REPLY ))
     [[ $_zhm_register == '#' ]] && by=$sign
     _zhm_changes_reset
-    local -a ranges
+    local -a ranges=()
     local -i diff=0 changed=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -1082,7 +1083,7 @@ function _zhm_shell_impl() {
     local cmd=$1 behaviour=$2
     local -i pipe=0 i offset=0
     [[ $behaviour == (replace|ignore) ]] && pipe=1
-    local -a changes_from changes_to outputs ranges
+    local -a changes_from=() changes_to=() outputs=() ranges=()
     local shared="" have_shared=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -1102,7 +1103,7 @@ function _zhm_shell_impl() {
             fi
             (( pipe )) || { shared=$output have_shared=1 }
         fi
-        local -i cf ct deleted
+        local -i cf=0 ct=0 deleted=0
         case $behaviour in
             (replace) cf=$from ct=$to deleted=$(( to - from )) ;;
             (insert) cf=$from ct=$from deleted=0 ;;
@@ -1141,7 +1142,7 @@ function _zhm_cmd_shell_keep_pipe() {
     _zhm_prompt "keep-pipe:" '|' || return 0
     local cmd=$REPLY
     [[ -n $cmd ]] || return 0
-    local -a ranges
+    local -a ranges=()
     local -i i index=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -1192,7 +1193,7 @@ function _zhm_autopair_next_range() {
     fi
     _zhm_range_is_single_grapheme $a $h && single=1
     if (( inserted == 0 )); then
-        local -i ea
+        local -i ea=0
         if (( single )); then
             (( ea = a < _zhm_len ? a + 1 : _zhm_len ))
         else
@@ -1211,7 +1212,7 @@ function _zhm_autopair_next_range() {
         _zhm_rh=$(( h + 1 ))
         return
     fi
-    local -i eh
+    local -i eh=0
     if (( h == 0 || h < a )); then
         eh=$(( h + 1 ))
     else
@@ -1287,22 +1288,17 @@ function _zhm_autopair_insert_hook() {
 function _zhm_insert_char() {
     local ch=$1
     local -i i offset=0
-    local -a ranges
+    local -a ranges=()
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} from to
-        local text
+        local text=""
         if _zhm_autopair_insert_hook $a $h "$ch"; then
             from=$_zhm_hook_from to=$_zhm_hook_to text=$_zhm_hook_text
         else
             _zhm_cursor $a $h
             from=$REPLY to=$REPLY text=$ch
-            # Map the range through this single change.
-            local -a saved_cf saved_ct saved_cx
-            saved_cf=( "${_zhm_cf[@]}" ) saved_ct=( "${_zhm_ct[@]}" ) saved_cx=( "${_zhm_cx[@]}" )
-            _zhm_cf=( $from ) _zhm_ct=( $to ) _zhm_cx=( "$text" )
-            _zhm_map_range $a $h
-            _zhm_cf=( "${saved_cf[@]}" ) _zhm_ct=( "${saved_ct[@]}" ) _zhm_cx=( "${saved_cx[@]}" )
+            _zhm_map_range_one $a $h $from $to "$text"
         fi
         ranges+=( $(( _zhm_ra + offset )) $(( _zhm_rh + offset )) )
         (( offset += ${#text} - (to - from) ))
@@ -1323,7 +1319,8 @@ function _zhm_cmd_insert_typed() {
     zle .self-insert
     local typed=$BUFFER
     BUFFER=$saved_buffer CURSOR=$saved_cursor
-    local c
+    _zhm_amend_last_key "$typed"
+    local c=""
     for c in "${(@s::)typed}"; do
         _zhm_insert_char "$c"
     done
@@ -1338,11 +1335,11 @@ function _zhm_cmd_insert_key_char() {
 
 function _zhm_cmd_insert_tab() {
     _zhm_changes_reset
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_cursor ${_zhm_sa[i]} ${_zhm_sh[i]}
         local -i cursor=$REPLY
-        local indent
+        local indent=""
         if (( _zhm_indent_width == 0 )); then
             indent=$'\t'
         else
@@ -1357,7 +1354,7 @@ function _zhm_cmd_insert_tab() {
 }
 
 function _zhm_cmd_insert_newline() {
-    local -a ranges
+    local -a ranges=()
     local -i i global=0 last=0
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
@@ -1369,8 +1366,8 @@ function _zhm_cmd_insert_newline() {
         _zhm_line_of $pos; line=$REPLY
         _zhm_line_start $line; ls=$REPLY
         local before=${_zhm_text:$ls:$(( pos - ls ))}
-        local -i from to local_offs
-        local new_text
+        local -i from=0 to=0 local_offs=0
+        local new_text=""
         if [[ $before == *[^[:space:]]* ]]; then
             local trimmed=${before%%[[:space:]]#}
             local -i first_trailing=$(( ls + ${#trimmed} ))
@@ -1421,7 +1418,7 @@ function _zhm_cmd_insert_newline() {
 function _zhm_delete_insert_mode() {
     local fn=$1
     local -i forward=$2 i last=0 eof=0
-    local -a ranges
+    local -a ranges=()
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -1455,7 +1452,7 @@ function _zhm_delete_insert_mode() {
 }
 
 function _zhm_d_char_forward() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     _zhm_cursor $1 $2
     _zhm_ra=$REPLY
@@ -1548,7 +1545,7 @@ function _zhm_dedent() {
         return 0
     fi
     local -i width=0 iw=$(( _zhm_indent_width > 0 ? _zhm_indent_width : ZHM_TAB_WIDTH ))
-    local c
+    local c=""
     for c in "${(@s::)frag}"; do
         if [[ $c == $'\t' ]]; then (( width += ZHM_TAB_WIDTH )); else (( width++ )); fi
     done
@@ -1604,7 +1601,7 @@ function _zhm_autopair_delete_hook() {
 function _zhm_cmd_delete_char_backward() {
     local -i count i offset=0 last=0
     _zhm_count_or_1; count=$REPLY
-    local -a ranges
+    local -a ranges=()
     _zhm_changes_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} pos from to have_range=0
@@ -1618,16 +1615,12 @@ function _zhm_cmd_delete_char_backward() {
         else
             (( from = pos - count < 0 ? 0 : pos - count, to = pos ))
         fi
-        local -i size
+        local -i size=0
         if (( last > from )); then (( size = to - last )); else (( size = to - from )); fi
         if (( have_range )); then
             _zhm_ra=$_zhm_del_ra _zhm_rh=$_zhm_del_rh
         else
-            local -a scf sct scx
-            scf=( "${_zhm_cf[@]}" ) sct=( "${_zhm_ct[@]}" ) scx=( "${_zhm_cx[@]}" )
-            _zhm_cf=( $from ) _zhm_ct=( $to ) _zhm_cx=( "" )
-            _zhm_map_range $a $h
-            _zhm_cf=( "${scf[@]}" ) _zhm_ct=( "${sct[@]}" ) _zhm_cx=( "${scx[@]}" )
+            _zhm_map_range_one $a $h $from $to ""
         fi
         ranges+=( $(( _zhm_ra - offset < 0 ? 0 : _zhm_ra - offset )) $(( _zhm_rh - offset < 0 ? 0 : _zhm_rh - offset )) )
         (( offset += size ))

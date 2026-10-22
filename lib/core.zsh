@@ -60,11 +60,11 @@ function _zhm_set_text_raw() {
     _zhm_text=$1
     _zhm_len=${#_zhm_text}
     _zhm_chars=( "${(@s::)_zhm_text}" )
-    local -a parts
+    local -a parts=()
     parts=( "${(@ps:\n:)_zhm_text}" )
     _zhm_lines=()
     local -i p=0
-    local part
+    local part=""
     for part in "${parts[@]}"; do
         _zhm_lines+=( $p )
         (( p += ${#part} + 1 ))
@@ -234,8 +234,8 @@ function _zhm_set_single() {
 }
 
 function _zhm_selection_serialize() {
-    local -a parts
-    local -i i
+    local -a parts=()
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         parts+=( ${_zhm_sa[i]} ${_zhm_sh[i]} )
     done
@@ -251,14 +251,14 @@ function _zhm_normalize() {
     local -i n=${#_zhm_sa}
     (( n < 2 )) && return 0
     local -i pa=${_zhm_sa[_zhm_pi]} ph=${_zhm_sh[_zhm_pi]} i
-    local -a keyed
+    local -a keyed=()
     for (( i = 1; i <= n; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         keyed+=( "$(( a < h ? a : h )) $i" )
     done
     keyed=( ${(on)keyed} )
-    local -a sa sh sc
-    local entry
+    local -a sa=() sh=() sc=()
+    local entry=""
     for entry in "${keyed[@]}"; do
         local -i idx=${entry#* }
         local -i ca=${_zhm_sa[idx]} ch=${_zhm_sh[idx]} cs=${_zhm_scol[idx]:--1}
@@ -267,7 +267,7 @@ function _zhm_normalize() {
             local -i pf=$(( pa2 < ph2 ? pa2 : ph2 )) pt=$(( pa2 < ph2 ? ph2 : pa2 ))
             local -i cf=$(( ca < ch ? ca : ch )) ct=$(( ca < ch ? ch : ca ))
             if (( pf == cf || (pt > cf && ct > pf) )); then
-                local -i ma mh
+                local -i ma=0 mh=0
                 if (( ca > ch && pa2 > ph2 )); then
                     (( ma = ca > pa2 ? ca : pa2, mh = ch < ph2 ? ch : ph2 ))
                 else
@@ -295,7 +295,7 @@ function _zhm_normalize() {
 # `Selection::ensure_invariants`: ranges are at least one character wide
 # (except at the very end of the text), sorted and non-overlapping.
 function _zhm_ensure_invariants() {
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         (( _zhm_sa[i] > _zhm_len )) && _zhm_sa[i]=$_zhm_len
         (( _zhm_sh[i] > _zhm_len )) && _zhm_sh[i]=$_zhm_len
@@ -313,8 +313,8 @@ function _zhm_ensure_invariants() {
 function _zhm_transform() {
     local fn=$1
     shift
-    local -i i
-    local -a sa sh
+    local -i i=0
+    local -a sa=() sh=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_ra=${_zhm_sa[i]} _zhm_rh=${_zhm_sh[i]}
         $fn ${_zhm_sa[i]} ${_zhm_sh[i]} "$@" || return
@@ -340,13 +340,27 @@ function _zhm_change() {
     _zhm_cf+=( $1 ) _zhm_ct+=( $2 ) _zhm_cx+=( "$3" )
 }
 
+# Mapping state, so that mapping positions in increasing order is a single
+# pass over the changes: the index of the first change not yet passed, the
+# offset accumulated before it, and the last position mapped.
+typeset -gi _zhm_mi=1 _zhm_md=0 _zhm_mlast=0
+
+function _zhm_map_reset() {
+    _zhm_mi=1 _zhm_md=0 _zhm_mlast=0
+}
+
 # Map position $1 through the pending changes. $2 is the association: one of
 # before, after, before_sticky or after_sticky (see `helix_core::Assoc`).
+# Call `_zhm_map_reset` before mapping a new set of positions.
 function _zhm_map_pos() {
-    local -i pos=$1 delta=0 i from to ins
+    local -i pos=$1 i from to ins delta
     local assoc=$2
-    for (( i = 1; i <= ${#_zhm_cf}; i++ )); do
+    (( pos < _zhm_mlast )) && _zhm_map_reset
+    _zhm_mlast=$pos
+    delta=$_zhm_md
+    for (( i = _zhm_mi; i <= ${#_zhm_cf}; i++ )); do
         from=${_zhm_cf[i]} to=${_zhm_ct[i]} ins=${#_zhm_cx[i]}
+        _zhm_mi=$i _zhm_md=$delta
         (( pos < from )) && break
         if (( from == to )); then
             if (( pos == from )); then
@@ -371,7 +385,17 @@ function _zhm_map_pos() {
         fi
         (( delta += ins - (to - from) ))
     done
+    if (( i > ${#_zhm_cf} )); then
+        _zhm_mi=$i _zhm_md=$delta
+    fi
     REPLY=$(( pos + delta ))
+}
+
+# Map range ($1, $2) through the single change ($3, $4, $5).
+function _zhm_map_range_one() {
+    local -a _zhm_cf=( $3 ) _zhm_ct=( $4 ) _zhm_cx=( "$5" )
+    _zhm_map_reset
+    _zhm_map_range $1 $2
 }
 
 # Map a range through the pending changes (`Range::map`). The start of the
@@ -399,7 +423,7 @@ function _zhm_map_range() {
 function _zhm_apply_changes() {
     local -i n=${#_zhm_cf} i last=0
     local new=""
-    local -a cf ct cx
+    local -a cf=() ct=() cx=()
     for (( i = 1; i <= n; i++ )); do
         local -i from=${_zhm_cf[i]} to=${_zhm_ct[i]}
         (( from < last || to < from || to > _zhm_len )) && {
@@ -426,7 +450,8 @@ function _zhm_apply_changes() {
     _zhm_compose_insert
     local -i was_dirty=$_zhm_dirty
     _zhm_history_begin_change
-    local -a sa sh
+    local -a sa=() sh=()
+    _zhm_map_reset
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_map_range ${_zhm_sa[i]} ${_zhm_sh[i]}
         sa+=( $_zhm_ra ) sh+=( $_zhm_rh )
@@ -449,6 +474,7 @@ function _zhm_apply_changes() {
         done
         _zhm_last_edit=$(( _zhm_cf[pick] + delta + ${#_zhm_cx[pick]} ))
     else
+        _zhm_map_reset
         _zhm_map_pos $_zhm_last_edit after
         _zhm_last_edit=$REPLY
     fi
@@ -495,14 +521,14 @@ typeset -gi _zhm_indent_width=2
 # between consecutive lines. Sets _zhm_indent_width.
 function _zhm_detect_indent() {
     _zhm_indent_width=$ZHM_INDENT_WIDTH
-    local -a hist
+    local -a hist=()
     hist=( 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 )
     local -i prev_tabs=0 prev_count=0 n=0
-    local line
+    local line=""
     for line in "${(@f)_zhm_text}"; do
         (( ++n > 1000 )) && break
         local first=${line[1]}
-        local -i is_tabs
+        local -i is_tabs=0
         if [[ $first == $'\t' ]]; then
             is_tabs=1
         elif [[ $first == ' ' ]]; then
@@ -513,7 +539,7 @@ function _zhm_detect_indent() {
             prev_tabs=0 prev_count=0
             continue
         fi
-        local lead
+        local lead=""
         if (( is_tabs )); then
             lead=${(M)line##$'\t'#}
         else

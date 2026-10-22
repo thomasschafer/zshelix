@@ -4,8 +4,9 @@
     tests/fuzz.py -n 200          run 200 random cases
     tests/fuzz.py --seed 5        reproducible run
 
-Mismatches are printed and appended to tests/cases/fuzz-failures.txt so they
-can be recorded with `tests/run.py --record` once triaged.
+Mismatches are printed and appended to tests/fuzz-failures.txt (which isn't
+tracked); once triaged, move them into tests/cases and record them with
+`tests/run.py --record`.
 """
 
 import argparse
@@ -181,7 +182,7 @@ def main():
             print(f"  {''.join(tokens)!r} on {text!r}")
         failures = minimal
     if failures:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cases", "fuzz-failures.txt")
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fuzz-failures.txt")
         with open(path, "a") as f:
             for text, tokens in failures:
                 keys = "".join(tokens) + "<esc><esc>"

@@ -43,7 +43,7 @@ function _zhm_reg_push() {
     case $name in
         (_|'#'|.|%|'+'|'*') _zhm_reg_write "$name" "$value" ;;
         (*)
-            local -a values
+            local -a values=()
             _zhm_reg_read "$name" && values=( "${reply[@]}" )
             values=( "$value" "${(@)values:#$value}" )
             _zhm_regs[$name]=${(pj:\0:)values}
@@ -58,13 +58,13 @@ function _zhm_reg_read() {
     case $name in
         (_) return 1 ;;
         ('#')
-            local -i i
+            local -i i=0
             for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
                 reply+=( $i )
             done
             ;;
         (.)
-            local -i i
+            local -i i=0
             for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
                 local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
                 reply+=( "${_zhm_text:$(( a < h ? a : h )):$(( a < h ? h - a : a - h ))}" )
@@ -72,11 +72,16 @@ function _zhm_reg_read() {
             ;;
         (%) reply=( zsh ) ;;
         ('+'|'*')
-            local content
-            content=$(_zhm_clipboard_paste "$name"; print -n x) || return 1
-            content=${content%x}
+            local content=""
+            content=$(_zhm_clipboard_paste "$name"; print -n "x$?")
+            local -i code=${content##*x}
+            content=${content%x*}
+            if (( code != 0 )); then
+                _zhm_error "failed to read the system clipboard"
+                return 1
+            fi
             if (( ${+_zhm_clip_cache[$name]} )); then
-                local -a cached
+                local -a cached=()
                 cached=( "${(@ps:\0:)_zhm_clip_cache[$name]}" )
                 if [[ ${(pj:\n:)cached} == "$content" ]]; then
                     reply=( "${cached[@]}" )
@@ -157,7 +162,7 @@ function _zhm_clipboard_copy() {
         (tmux) print -rn -- "$2" | tmux load-buffer -w - ;;
         (termcode)
             # OSC 52, which most terminals support for copying.
-            local encoded
+            local encoded=""
             encoded=$(print -rn -- "$2" | base64 | tr -d '\n') || return 1
             print -rn -- $'\e]52;'${${primary:#0}:+p}${${primary:#1}:+c}';'$encoded$'\a' > /dev/tty
             ;;

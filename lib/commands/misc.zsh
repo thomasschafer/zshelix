@@ -50,8 +50,8 @@ function _zhm_search_impl() {
 function _zhm_search_forward_from() {
     local -i start=$1 bs be off
     _zhm_chars_to_bytes $start; off=$REPLY
-    local ZPCRE_OP MATCH
-    local -a match
+    local ZPCRE_OP="" MATCH=""
+    local -a match=()
     if (( start >= _zhm_len )); then
         _zhm_regex_matches_empty || return 1
         reply=( $_zhm_len $_zhm_len )
@@ -63,7 +63,7 @@ function _zhm_search_forward_from() {
         return 0
     fi
     bs=${ZPCRE_OP% *} be=${ZPCRE_OP#* }
-    local -i cs ce
+    local -i cs=0 ce=0
     _zhm_bytes_to_chars "$_zhm_text" $bs; cs=$REPLY
     _zhm_bytes_to_chars "$_zhm_text" $be; ce=$REPLY
     reply=( $cs $ce )
@@ -138,7 +138,7 @@ function _zhm_search_selection_impl() {
     local -i detect=$1 i
     local reg=${_zhm_register:-/}
     local -A seen
-    local -a parts
+    local -a parts=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -188,8 +188,8 @@ function _zhm_cmd_make_search_word_bounded() {
 typeset -g _zhm_regex_op=""
 
 function _zhm_select_on_matches() {
-    local -i i
-    local -a ranges
+    local -i i=0
+    local -a ranges=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a )) k
@@ -205,8 +205,8 @@ function _zhm_select_on_matches() {
 }
 
 function _zhm_split_on_matches() {
-    local -i i
-    local -a ranges
+    local -i i=0
+    local -a ranges=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a )) k
@@ -227,7 +227,7 @@ function _zhm_split_on_matches() {
 
 function _zhm_keep_or_remove_matches() {
     local -i remove=$1 i
-    local -a ranges
+    local -a ranges=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a )) matched=0
@@ -286,13 +286,21 @@ function _zhm_cmd_remove_selections() { _zhm_regex_prompt_cmd remove "remove:" "
 ### Registers ###
 
 function _zhm_cmd_select_register() {
-    local -a lines
-    local name
+    local -a lines=()
+    local name="" preview=""
     for name in ${(ok)_zhm_regs}; do
-        local preview=${${(ps:\0:)_zhm_regs[$name]}[1]}
+        preview=${${(ps:\0:)_zhm_regs[$name]}[1]}
         preview=${preview//$'\n'/⏎}
         lines+=( "$name  ${preview[1,40]}" )
     done
+    lines+=(
+        "_  <empty>"
+        "#  <selection indices>"
+        ".  <selection contents>"
+        "%  <document path>"
+        "+  <system clipboard>"
+        "*  <primary clipboard>"
+    )
     _zhm_show_info "Select register" "${lines[@]}"
     _zhm_read_char
     local -i ok=$?
@@ -322,7 +330,7 @@ function _zhm_cmd_record_macro() {
 
 function _zhm_cmd_replay_macro() {
     local reg=${_zhm_register:-@}
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     if (( _zhm_replaying )); then
         _zhm_error "Cannot replay from register [$reg] because already replaying"
@@ -336,7 +344,7 @@ function _zhm_cmd_replay_macro() {
         _zhm_error "Invalid macro: ${reply[1]}"
         return 1
     fi
-    local -a keys all
+    local -a keys=() all=()
     keys=( "${reply[@]}" )
     for (( i = 0; i < count; i++ )); do all+=( "${keys[@]}" ); done
     _zhm_replay_input "${all[@]}"
@@ -346,9 +354,9 @@ function _zhm_cmd_replay_macro() {
 
 function _zhm_cmd_repeat_last_insert() {
     [[ -n $_zhm_last_insert_cmd ]] || return 0
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
-    local -a events
+    local -a events=()
     events=( "${_zhm_last_insert_keys[@]}" )
     for (( i = 1; i < count; i++ )); do
         events+=( "$_ZHM_KEY_REPEAT_INSERT" "${_zhm_last_insert_keys[@]}" )
@@ -358,10 +366,10 @@ function _zhm_cmd_repeat_last_insert() {
 }
 
 function _zhm_replay_insert_cmd() {
-    local -a words
+    local -a words=()
     words=( ${(z)_zhm_last_insert_cmd} )
     local cmd=${words[1]}
-    local -a args
+    local -a args=()
     args=( "${(@Q)words[2,-1]}" )
     _zhm_cmd_$cmd "${args[@]}"
 }
@@ -425,15 +433,11 @@ function _zhm_cmd_eof_or_page_cursor_half_down() {
     _zhm_cmd_page_cursor_half_down
 }
 
+# zsh's own end-of-file handling (which also respects IGNORE_EOF): on an
+# empty line, delete-char-or-list invoked by Ctrl-d signals end of file.
 function _zhm_eof() {
-    # Mirror zsh's behaviour for Ctrl-d on an empty line.
-    if [[ -o ignore_eof ]]; then
-        _zhm_status "zsh: use 'exit' to exit."
-        return 0
-    fi
     _zhm_clear_highlight
-    BUFFER=exit
-    zle .accept-line
+    zle .delete-char-or-list
 }
 
 function _zhm_cmd_noop() {
@@ -483,7 +487,7 @@ typeset -gA _ZHM_TYPABLE=(
 
 function _zhm_typable_sort() {
     local -i reverse=0 insensitive=0
-    local arg
+    local arg=""
     for arg in "$@"; do
         case $arg in
             (-r|--reverse) reverse=1 ;;
@@ -496,13 +500,13 @@ function _zhm_typable_sort() {
         return 1
     fi
     _zhm_selection_fragments
-    local -a frags sorted
+    local -a frags=() sorted=()
     frags=( "${reply[@]}" )
     # Sort by code point, as Rust compares strings.
     () {
         local LC_ALL=C
-        local -a keyed
-        local -i i
+        local -a keyed=()
+        local -i i=0
         for (( i = 1; i <= ${#frags}; i++ )); do
             if (( insensitive )); then
                 keyed+=( "${(L)frags[i]}"$'\0'$i )
@@ -511,13 +515,13 @@ function _zhm_typable_sort() {
             fi
         done
         if (( reverse )); then keyed=( "${(@O)keyed}" ); else keyed=( "${(@o)keyed}" ); fi
-        local k
+        local k=""
         for k in "${keyed[@]}"; do
             sorted+=( "${frags[${k##*$'\0'}]}" )
         done
     }
     _zhm_changes_reset
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         _zhm_change $(( a < h ? a : h )) $(( a < h ? h : a )) "${sorted[i]}"
@@ -531,7 +535,7 @@ function _zhm_cmd_command_mode() {
     [[ -n $input ]] || return 0
     local name=${input%%[[:space:]]*}
     local rest=${${input#$name}##[[:space:]]#}
-    local -a args
+    local -a args=()
     args=( "${(@Q)${(z)rest}}" )
     [[ -n $rest ]] || args=()
     if [[ $name == <-> ]]; then
@@ -626,7 +630,7 @@ function _zhm_cmd_command_mode() {
             [[ -n ${args[1]} ]] || { _zhm_error "usage: read <file>"; return 1 }
             local file=${~args[1]}
             [[ -r $file ]] || { _zhm_error "Could not read $file"; return 1 }
-            local content
+            local content=""
             content=$(<$file; print -n x)
             reply=( "${content%x}" )
             _zhm_paste_values cursor 1

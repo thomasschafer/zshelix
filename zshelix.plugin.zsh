@@ -16,7 +16,7 @@ typeset -g _ZHM_ROOT=${0:A:h}
     if ! zmodload zsh/pcre 2>/dev/null; then
         print -ru2 -- "zshelix: zsh was built without PCRE support (zsh/pcre); regex commands won't work"
     fi
-}
+} || return 1
 
 ### Configuration defaults ###
 
@@ -38,11 +38,13 @@ typeset -g ZHM_CURSOR_BAR=$'\e[4 q'
 : ${ZHM_AUTO_PAIRS:=1}
 : ${ZHM_SEARCH_WRAP_AROUND:=1}
 : ${ZHM_HISTORY_NAVIGATION:=1}
+: ${ZHM_JUMP_LABEL_ALPHABET:=abcdefghijklmnopqrstuvwxyz}
+: ${ZHM_STYLE_JUMP_LABEL:=fg=red,bold}
 
 ### Modules ###
 
 () {
-    local file
+    local file=""
     for file in core history registers movement widgets docs keymap \
         commands/selection commands/edit commands/misc commands/jump; do
         source "$_ZHM_ROOT/lib/$file.zsh"
@@ -88,16 +90,17 @@ function _zhm_readkey_nop() {}
 # common function and modified cursor keys.
 function _zhm_ignorable_keys() {
     reply=()
-    local -i c
+    local -i c=0
     for (( c = 32; c < 127; c++ )); do
         reply+=( $'\e'${(#)c} )
     done
-    local seq
+    local seq=""
     for seq in '[2~' '[3~' '[5~' '[6~' OP OQ OR OS '[11~' '[12~' '[13~' '[14~' \
         '[15~' '[17~' '[18~' '[19~' '[20~' '[21~' '[23~' '[24~' '[Z' \
         '[1;2A' '[1;2B' '[1;2C' '[1;2D' '[1;5A' '[1;5B' '[1;5C' '[1;5D' \
         '[1;3A' '[1;3B' '[1;3C' '[1;3D' '[1;2H' '[1;2F' '[1;5H' '[1;5F' \
-        '[3;2~' '[3;3~' '[3;5~' '[H' '[F' OH OF '[1~' '[4~' '[7~' '[8~'; do
+        '[3;2~' '[3;3~' '[3;5~' '[H' '[F' OH OF '[1~' '[4~' '[7~' '[8~' \
+        '[I' '[O'; do
         reply+=( $'\e'$seq )
     done
 }
@@ -108,17 +111,17 @@ function _zhm_ignorable_keys() {
 function _zhm_bind_ignorable_keys() {
     local keymap=$1 alt_widget=${2:-zhm_noop}
     _zhm_ignorable_keys
-    local -a keys
+    local -a keys=()
     keys=( "${reply[@]}" )
     # Learn how bindkey prints each key by binding them in a scratch keymap.
     bindkey -N zhm-scratch
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#keys}; i++ )); do
         _zhm_bindkey_escape "${keys[i]}"
         bindkey -M zhm-scratch -- "$REPLY" zhm-scratch-$i
     done
     local -A bound
-    local line
+    local line=""
     for line in "${(@f)$(bindkey -M $keymap -L)}"; do
         line=${line#bindkey -M $keymap }
         [[ $line == -R* ]] && continue
@@ -143,8 +146,8 @@ function _zhm_bind_ignorable_keys() {
 # for the Ctrl keys zsh would insert literally, leaving those with a shell
 # function (Ctrl-v, Ctrl-r, ...) alone.
 function _zhm_bind_ctrl_letters() {
-    local line
-    local -a chars
+    local line=""
+    local -a chars=()
     for line in "${(@f)$(bindkey -M viins -L)}"; do
         [[ $line == *' 'self-insert ]] || continue
         if [[ $line == 'bindkey -R -M viins "^'?'"-"^'?'" '* ]]; then
@@ -156,7 +159,7 @@ function _zhm_bind_ctrl_letters() {
             chars+=( $(( #single )) )
         fi
     done
-    local -i c
+    local -i c=0
     for c in "${chars[@]}"; do
         # Only Ctrl with a letter (^A to ^Z).
         (( c >= 65 && c <= 90 )) || continue
@@ -175,7 +178,7 @@ function _zhm_initialise() {
     fi
 
     # A widget for every command.
-    local name
+    local name=""
     for name in ${(k)functions[(I)_zhm_cmd_*]}; do
         zle -N zhm_${name#_zhm_cmd_} _zhm_widget
     done
@@ -187,7 +190,7 @@ function _zhm_initialise() {
     bindkey -N zhm-readkey
     bindkey -M zhm-readkey -R '^@'-'^?' zhm-readkey-key
     bindkey -M zhm-readkey -R '\M-^@'-'\M-^?' zhm-readkey-utf8
-    local key seq
+    local key="" seq=""
     for key in esc left right up down home end pageup pagedown del S-tab \
         A-backspace A-del A-up A-down A-left A-right; do
         _zhm_key_raw $key
@@ -196,7 +199,7 @@ function _zhm_initialise() {
             bindkey -M zhm-readkey -- "$REPLY" zhm-readkey-key
         done
     done
-    local -i c
+    local -i c=0
     for (( c = 32; c < 127; c++ )); do
         _zhm_bindkey_escape $'\e'${(#)c}
         bindkey -M zhm-readkey -- "$REPLY" zhm-readkey-key
@@ -241,9 +244,6 @@ function _zhm_initialise() {
     # else (fzf, atuin) has already claimed it.
     if [[ $(bindkey -M viins '^R') == *' 'redisplay ]]; then
         bindkey -M viins '^R' history-incremental-search-backward
-    fi
-    if [[ $(bindkey -M viins '^S') == *' 'undefined-key ]]; then
-        bindkey -M viins '^S' history-incremental-search-forward
     fi
 
     if [[ -z $ZHM_KEYTIMEOUT ]]; then

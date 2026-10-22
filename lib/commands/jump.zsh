@@ -1,9 +1,6 @@
 # Jumping to words with two-character labels (`gw`), ported from Helix's
 # `jump_to_word` and `jump_to_label`.
 
-: ${ZHM_JUMP_LABEL_ALPHABET:=abcdefghijklmnopqrstuvwxyz}
-: ${ZHM_STYLE_JUMP_LABEL:=fg=red,bold}
-
 # Whether the two characters before $1 (or from $1 if $2 is set) are both
 # word characters.
 function _zhm_two_word_chars() {
@@ -30,7 +27,7 @@ function _zhm_jump_candidates() {
         _zhm_word_move prev_word_start $ra $rh 1
         (( _zhm_ra == (cursor < _zhm_len ? cursor + 1 : _zhm_len) )) && ra=$_zhm_ra rh=$_zhm_rh
     fi
-    local -a words
+    local -a words=()
     while :; do
         local -i changed=0
         while (( fh < _zhm_len )); do
@@ -64,7 +61,7 @@ function _zhm_jump_to_word() {
     local -i size=${#alphabet}
     (( size )) || return 0
     _zhm_jump_candidates
-    local -a words
+    local -a words=()
     words=( "${reply[@]}" )
     local -i count=$(( ${#words} / 2 ))
     (( count )) || return 0
@@ -72,10 +69,10 @@ function _zhm_jump_to_word() {
     # Show the labels by temporarily writing them over the start of each
     # word, which keeps the text the same length.
     local saved_buffer=$BUFFER
-    local -a saved_hl
+    local -a saved_hl=()
     saved_hl=( "${region_highlight[@]}" )
     local shown=$BUFFER
-    local -a hl
+    local -a hl=()
     for (( i = 0; i < count; i++ )); do
         local -i from=${words[2 * i + 1]} to=${words[2 * i + 2]}
         (( from = from < to ? from : to ))

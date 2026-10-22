@@ -27,7 +27,7 @@ function _zhm_cmd_extend_char_right() { _zhm_count_or_1; _zhm_transform _zhm_t_m
 function _zhm_move_vertical_impl() {
     local -i forward=$1 extend=$2 count i
     _zhm_count_or_1; count=$REPLY
-    local -a sa sh sc
+    local -a sa=() sh=() sc=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         _zhm_move_vertically $forward ${_zhm_sa[i]} ${_zhm_sh[i]} ${_zhm_scol[i]:--1} $count $extend
         sa+=( $_zhm_ra ) sh+=( $_zhm_rh ) sc+=( $_zhm_rcol )
@@ -60,7 +60,7 @@ function _zhm_history_navigate() {
     _zhm_primary_cursor
     _zhm_visual_col $REPLY; col=$REPLY
     (( ${_zhm_scol[_zhm_pi]:--1} >= 0 )) && col=${_zhm_scol[_zhm_pi]}
-    local widget
+    local widget=""
     if (( forward )); then
         widget=${ZHM_HISTORY_NEXT_WIDGET:-down-history}
     else
@@ -70,7 +70,7 @@ function _zhm_history_navigate() {
     _zhm_load_text
     _zhm_detect_indent
     _zhm_history_reset
-    local -i line
+    local -i line=0
     if (( forward )); then
         line=0
     else
@@ -265,7 +265,7 @@ function _zhm_t_find_line_ending() {
 function _zhm_t_find_char() {
     local -i anchor=$1 head=$2 count=$4 forward=$5 inclusive=$6 extend=$7
     local ch=$3
-    local -i ca chd start pos
+    local -i ca=0 chd=0 start=0 pos=0
     _zhm_cursor $anchor $head; ca=$REPLY
     (( chd = ca < _zhm_len ? ca + 1 : _zhm_len ))
     if (( inclusive && forward )); then
@@ -319,7 +319,7 @@ function _zhm_cmd_extend_prev_char() { _zhm_find_char 0 1 1 }
 # Repeat the last find motion (with its original count) `count` times.
 function _zhm_cmd_repeat_last_motion() {
     [[ -n $_zhm_last_motion ]] || return 0
-    local -i count i
+    local -i count=0 i=0
     _zhm_count_or_1; count=$REPLY
     for (( i = 0; i < count; i++ )); do
         eval "$_zhm_last_motion"
@@ -400,8 +400,9 @@ function _zhm_goto_window_impl() {
         (bottom) line=$(( last - offset > 0 ? last - offset : 0 )) ;;
     esac
     _zhm_line_start $line
+    local -i pos=$REPLY
     _zhm_extend_flag
-    _zhm_transform _zhm_t_put $REPLY $REPLY
+    _zhm_transform _zhm_t_put $pos $REPLY
 }
 function _zhm_cmd_goto_window_top() { _zhm_goto_window_impl top }
 function _zhm_cmd_goto_window_center() { _zhm_goto_window_impl center }
@@ -454,7 +455,7 @@ function _zhm_cmd_normal_mode() {
         _zhm_set_mode normal
         _zhm_try_restore_indent
         if (( _zhm_restore_cursor )); then
-            local -i i
+            local -i i=0
             for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
                 local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]} from to
                 (( from = a < h ? a : h, to = a < h ? h : a ))
@@ -470,7 +471,7 @@ function _zhm_cmd_normal_mode() {
 }
 
 function _zhm_cmd_select_mode() {
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         if (( _zhm_sa[i] == _zhm_sh[i] && _zhm_sh[i] == _zhm_len )); then
             (( _zhm_sa[i] = _zhm_sa[i] > 0 ? _zhm_sa[i] - 1 : 0 ))
@@ -515,7 +516,7 @@ function _zhm_t_extend_line() {
     _zhm_line_start $sl; start=$REPLY
     if (( el + 1 >= nlines )); then end=$_zhm_len; else _zhm_line_start $(( el + 1 )); end=$REPLY; fi
     local -i from=$(( anchor < head ? anchor : head )) to=$(( anchor < head ? head : anchor ))
-    local -i na nh target
+    local -i na=0 nh=0 target=0
     if (( from == start && to == end )); then
         if (( below )); then
             target=$(( el + count + 1 ))
@@ -563,7 +564,7 @@ function _zhm_t_select_line() {
     local -i from=$(( anchor < head ? anchor : head )) to=$(( anchor < head ? head : anchor ))
     local -i forward=$(( head >= anchor ))
     (( from != start || to != end )) && (( count = count > 0 ? count - 1 : 0 ))
-    local -i al hl
+    local -i al=0 hl=0
     if (( !below && forward )); then
         (( al = sl, hl = el - count < 0 ? 0 : el - count ))
     elif (( !below )); then
@@ -671,14 +672,14 @@ function _zhm_cmd_merge_selections() {
 
 function _zhm_cmd_merge_consecutive_selections() {
     local -i i pa=${_zhm_sa[_zhm_pi]} ph=${_zhm_sh[_zhm_pi]}
-    local -a sa sh
+    local -a sa=() sh=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i ca=${_zhm_sa[i]} ch=${_zhm_sh[i]}
         if (( ${#sa} )); then
             local -i pa2=${sa[-1]} ph2=${sh[-1]}
             local -i pt=$(( pa2 < ph2 ? ph2 : pa2 )) cf=$(( ca < ch ? ca : ch ))
             if (( pt == cf )); then
-                local -i ma mh
+                local -i ma=0 mh=0
                 if (( ca > ch && pa2 > ph2 )); then
                     (( ma = ca > pa2 ? ca : pa2, mh = ch < ph2 ? ch : ph2 ))
                 else
@@ -704,7 +705,7 @@ function _zhm_cmd_merge_consecutive_selections() {
 
 function _zhm_cmd_split_selection_on_newline() {
     local -i i pi=1
-    local -a ranges
+    local -a ranges=()
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
         local -i from=$(( a < h ? a : h )) to=$(( a < h ? h : a ))
@@ -728,7 +729,7 @@ function _zhm_cmd_split_selection_on_newline() {
 function _zhm_copy_selection_on_line() {
     local -i forward=$1 count i nlines=${#_zhm_lines}
     _zhm_count_or_1; count=$REPLY
-    local -a ranges
+    local -a ranges=()
     local -i primary=0
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         ranges+=( ${_zhm_sa[i]} ${_zhm_sh[i]} )
@@ -740,7 +741,7 @@ function _zhm_copy_selection_on_line() {
         else
             (( head = h, anchor = a > 0 ? a - 1 : 0 ))
         fi
-        local -i hrow arow hcol acol
+        local -i hrow=0 arow=0 hcol=0 acol=0
         _zhm_line_of $head; hrow=$REPLY
         _zhm_line_of $anchor; arow=$REPLY
         _zhm_visual_col $head; hcol=$REPLY
@@ -757,7 +758,7 @@ function _zhm_copy_selection_on_line() {
                 (( ar = arow - offset < 0 ? 0 : arow - offset, hr = hrow - offset < 0 ? 0 : hrow - offset ))
             fi
             (( ar >= nlines || hr >= nlines )) && break
-            local -i na nh
+            local -i na=0 nh=0
             _zhm_pos_at_visual_col $ar $acol; na=$REPLY
             _zhm_pos_at_visual_col $hr $hcol; nh=$REPLY
             _zhm_visual_col $na; local -i nac=$REPLY
@@ -780,7 +781,7 @@ function _zhm_cmd_copy_selection_on_next_line() { _zhm_copy_selection_on_line 1 
 function _zhm_cmd_copy_selection_on_prev_line() { _zhm_copy_selection_on_line 0 }
 
 function _zhm_cmd_trim_selections() {
-    local -a ranges
+    local -a ranges=()
     local -i i pi=0 n=0
     local -i pa=${_zhm_sa[_zhm_pi]} ph=${_zhm_sh[_zhm_pi]}
     local -i pf=$(( pa < ph ? pa : ph )) pt=$(( pa < ph ? ph : pa ))
@@ -812,7 +813,7 @@ function _zhm_cmd_trim_selections() {
 
 function _zhm_cmd_align_selections() {
     local -i i n=${#_zhm_sa} prev_line=-1 col_idx=0 running=0
-    local -a widths rows cols
+    local -a widths=() rows=() cols=()
     for (( i = 1; i <= n; i++ )); do
         local -i h=${_zhm_sh[i]} a=${_zhm_sa[i]} hr ar hc
         _zhm_line_of $h; hr=$REPLY
@@ -834,7 +835,7 @@ function _zhm_cmd_align_selections() {
         rows+=( $hr ) cols+=( $hc )
         (( running += width, col_idx++ ))
     done
-    local -a positions
+    local -a positions=()
     local -i sum=0 w
     for w in "${widths[@]}"; do
         (( sum += w ))
@@ -952,7 +953,7 @@ function _zhm_jumps_reset() {
 
 # Save the current selection to the jumplist (Helix's `push_jump`).
 function _zhm_save_jump() {
-    local REPLY
+    local REPLY=""
     _zhm_selection_serialize
     local sel=$REPLY
     # Drop any jumps after the current position, as Helix does.
@@ -967,7 +968,7 @@ function _zhm_save_jump() {
 }
 
 function _zhm_cmd_jump_backward() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     (( _zhm_jump_idx > 0 )) || return 0
     if (( _zhm_jump_idx == ${#_zhm_jumps} )); then
@@ -986,7 +987,7 @@ function _zhm_cmd_jump_backward() {
 }
 
 function _zhm_cmd_jump_forward() {
-    local -i count
+    local -i count=0
     _zhm_count_or_1; count=$REPLY
     local -i target=$(( _zhm_jump_idx + count ))
     (( target > ${#_zhm_jumps} )) && return 0

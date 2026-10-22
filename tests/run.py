@@ -20,6 +20,7 @@ line is a key sequence in Helix macro notation, e.g. `w<A-;>x<esc>`.
 """
 
 import argparse
+import subprocess
 import concurrent.futures
 import glob
 import json
@@ -31,6 +32,8 @@ import harness  # noqa: E402
 
 TESTS = os.path.dirname(os.path.abspath(__file__))
 EXPECTED = os.path.join(TESTS, "expected.json")
+# Key in expected.json recording the Helix version results came from.
+VERSION_KEY = "helix-version"
 
 
 def unescape(s):
@@ -123,7 +126,12 @@ def main():
         if args.record:
             # Keep only results for cases that still exist.
             live = {case_key(c) for c in load_cases()}
+            version = subprocess.run(["hx", "--version"], capture_output=True, text=True).stdout.strip()
+            old_version = expected.get(VERSION_KEY)
+            if old_version and old_version != version and not args.force:
+                print(f"warning: existing results are from {old_version}, recording with {version}")
             expected = {k: v for k, v in sorted(expected.items()) if k in live}
+            expected[VERSION_KEY] = version
             with open(EXPECTED, "w") as f:
                 json.dump(expected, f, ensure_ascii=False, indent=0, sort_keys=True)
                 f.write("\n")

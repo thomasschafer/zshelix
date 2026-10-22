@@ -91,7 +91,7 @@ function _zhm_set_mode() {
 }
 
 function _zhm_print_cursor() {
-    local seq
+    local seq=""
     case $_zhm_mode in
         (normal) seq=$ZHM_CURSOR_NORMAL ;;
         (select) seq=$ZHM_CURSOR_SELECT ;;
@@ -110,7 +110,7 @@ function _zhm_render() {
         region_highlight=( "${(@)region_highlight:|_zhm_hl}" )
     fi
     _zhm_hl=()
-    local style memo
+    local style="" memo=""
     [[ -n $_zhm_memo ]] && memo=" $_zhm_memo"
     for (( i = 1; i <= ${#_zhm_sa}; i++ )); do
         local -i a=${_zhm_sa[i]} h=${_zhm_sh[i]}
@@ -190,8 +190,10 @@ function _zhm_run() {
         ret=$?
     } always {
         if (( TRY_BLOCK_ERROR )); then
-            # A bug in a command shouldn't throw away the command line:
-            # restore the state from before the command and report it.
+            # A fatal error in a command (such as a bad subscript) would
+            # otherwise abort the whole command line: restore the state from
+            # before the command and report it. Non-fatal errors, like a bad
+            # math expression, don't get here.
             TRY_BLOCK_ERROR=0
             ret=1
             _zhm_set_text_raw "$saved_text"
@@ -227,6 +229,20 @@ function _zhm_record_key() {
     fi
 }
 
+# Replace the most recently recorded key event with $1, or drop it if $1 is
+# empty. Used when a widget reads the rest of a multi-byte character itself,
+# so that replaying the recording reproduces the whole character, and for
+# pastes, which Helix doesn't record.
+function _zhm_amend_last_key() {
+    (( _zhm_replaying )) && return 0
+    if [[ -n $_zhm_macro_reg ]] && (( ${#_zhm_macro_keys} )); then
+        if [[ -n $1 ]]; then _zhm_macro_keys[-1]=$1; else _zhm_macro_keys[-1]=(); fi
+    fi
+    if [[ $_zhm_mode == insert ]] && (( ${#_zhm_last_insert_keys} )); then
+        if [[ -n $1 ]]; then _zhm_last_insert_keys[-1]=$1; else _zhm_last_insert_keys[-1]=(); fi
+    fi
+}
+
 # Replay key events $@ as if typed, followed by a marker that ends the replay.
 function _zhm_replay_input() {
     _zhm_keys_to_input "$@"
@@ -244,7 +260,7 @@ function _zhm_replay_end() {
 typeset -gA _zhm_key_names
 
 function _zhm_key_names_init() {
-    local name seq
+    local name="" seq=""
     for name in esc ret tab S-tab backspace del left right up down home end \
         pageup pagedown A-backspace A-del A-up A-down A-left A-right; do
         _zhm_key_raw $name
@@ -252,7 +268,7 @@ function _zhm_key_names_init() {
             (( ${+_zhm_key_names[$seq]} )) || _zhm_key_names[$seq]=$name
         done
     done
-    local -i c
+    local -i c=0
     for (( c = 1; c < 27; c++ )); do
         seq=${(#)c}
         (( ${+_zhm_key_names[$seq]} )) || _zhm_key_names[$seq]=C-${(#)$(( c + 96 ))}
@@ -278,7 +294,7 @@ function _zhm_keys_encode() {
 # Decode Helix key notation into key events in $reply.
 function _zhm_keys_decode() {
     local spec=$1
-    local -a events
+    local -a events=()
     while [[ -n $spec ]]; do
         if [[ $spec == '<'[^\>]##'>'* ]]; then
             local name=${${spec#<}%%>*}
@@ -327,7 +343,7 @@ function _zhm_read_key() {
     if [[ $REPLY == zhm-readkey-utf8 ]]; then
         # Lead byte of a multi-byte UTF-8 character: read the continuation
         # bytes as well.
-        local -i lead extra i
+        local -i lead=0 extra=0 i=0
         () {
             setopt localoptions no_multibyte
             lead=$(( #key ))
@@ -388,7 +404,7 @@ function _zhm_read_char() {
 function _zhm_show_info() {
     local title=$1
     shift
-    local -a lines
+    local -a lines=()
     lines=( "$title" "$@" )
     zle -M -- "${(pj:\n:)lines}"
     zle -R
@@ -404,7 +420,7 @@ function _zhm_prompt() {
     local prompt=$1 reg=$2 update=$3
     local input="" key
     local -i pos=0 hist=0
-    local -a history
+    local -a history=()
     [[ -n $reg ]] && _zhm_reg_read "$reg" && history=( "${reply[@]}" )
     while :; do
         zle -M -- "$prompt${input[1,pos]}▏${input[pos+1,-1]}"
@@ -499,7 +515,7 @@ function _zhm_regex_compile() {
 
 # Number of characters in the first $2 bytes of $1.
 function _zhm_bytes_to_chars() {
-    local pre
+    local pre=""
     () {
         setopt localoptions no_multibyte
         pre=${1[1,$2]}
@@ -528,8 +544,8 @@ function _zhm_char_bytes() {
 # Whether the compiled regex matches the empty string, used for matches at the
 # very end of the text, where zsh's pcre_match can't start a search.
 function _zhm_regex_matches_empty() {
-    local ZPCRE_OP MATCH
-    local -a match
+    local ZPCRE_OP="" MATCH=""
+    local -a match=()
     pcre_match -b -- "" && [[ $ZPCRE_OP == "0 0" ]]
 }
 
@@ -545,8 +561,8 @@ function _zhm_regex_matches() {
     _zhm_chars_to_bytes $to; limit=$REPLY
     _zhm_chars_to_bytes $_zhm_len; total=$REPLY
     local prefix=${_zhm_text:0:$to}
-    local ZPCRE_OP MATCH
-    local -a match
+    local ZPCRE_OP="" MATCH=""
+    local -a match=()
     while (( off <= limit )); do
         if (( off >= total )); then
             if (( last_end != total )) && _zhm_regex_matches_empty; then
@@ -596,14 +612,18 @@ function _zhm_regex_matches() {
 function _zhm_shell_run() {
     local cmd=$1 input=$2
     local -i pipe=$3
-    local -a shell
+    local -a shell=()
     if (( ${#ZHM_SHELL} )); then
         shell=( "${ZHM_SHELL[@]}" )
     else
         shell=( sh -c )
     fi
-    local errfile=${TMPDIR:-/tmp}/zshelix-$$-stderr
-    local out
+    local errfile=""
+    errfile=$(mktemp "${TMPDIR:-/tmp}/zshelix.XXXXXX") || {
+        REPLY="failed to create a temporary file"
+        return 1
+    }
+    local out=""
     if (( pipe )); then
         out=$(print -rn -- "$input" | "${shell[@]}" "$cmd" 2>$errfile; print -n "x$?")
     else

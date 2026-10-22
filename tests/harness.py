@@ -220,6 +220,12 @@ function _zhm_test_dump() {
         (insert) mode=INS ;;
         (select) mode=SEL ;;
     esac
+    # The model must agree with what zle shows and would run.
+    _zhm_primary_cursor
+    local -i want_cursor=$(( REPLY > ${#BUFFER} ? ${#BUFFER} : REPLY ))
+    if [[ $BUFFER != "${_zhm_text%%$'\n'}" ]] || (( CURSOR != want_cursor )); then
+        mode="DESYNC(BUFFER=${(q)BUFFER} CURSOR=$CURSOR)"
+    fi
     local text=$_zhm_text out="" i
     local -A opens closes points
     local -i n=${#_zhm_sa}

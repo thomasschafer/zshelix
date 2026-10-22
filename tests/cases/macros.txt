@@ -18,3 +18,10 @@ Afoo<esc>.
 ofoo<esc>.
 wa(x<esc>w.
 wifoo<backspace>z<esc>w.
+text: x
+iéx<esc>.
+ié日<esc>.
+Qiéx<esc>Qq
+i<paste:XY><esc>.
+Qi<paste:XY><esc>Qq
+Q<paste:Z>Qq

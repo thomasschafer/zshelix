@@ -45,6 +45,10 @@ zshelix needs zsh 5.3 or later, built with PCRE support (the `zsh/pcre` module) 
 
 Load zshelix before plugins that wrap zle widgets, such as [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) and [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions). Bindings that other plugins (fzf, atuin and so on) add to the `viins` keymap are kept, since zshelix uses `viins` for insert mode.
 
+zshelix makes `viins` the main keymap, so plain `bindkey KEY WIDGET` calls made earlier in your `.zshrc` (which bind in the emacs keymap) no longer apply. Bind with `bindkey -M viins`, or after sourcing zshelix.
+
+zshelix uses `add-zle-hook-widget` for its `zle-line-init`, `zle-line-pre-redraw` and `zle-line-finish` hooks. Snippets that define those widgets directly with `zle -N zle-line-init ...` replace zshelix's hooks, so convert them to `add-zle-hook-widget` too.
+
 To accept autosuggestions with the arrow and End keys in insert mode, add zshelix's widgets to the accept list:
 
 ```sh
@@ -57,7 +61,7 @@ ZSH_AUTOSUGGEST_ACCEPT_WIDGETS+=(zhm_move_char_right zhm_goto_line_end_newline)
 A command line isn't a file, so a few things work differently:
 
 - Enter runs the command line in normal, select and insert mode. Use `Ctrl-j` to insert a newline.
-- Tab completes in insert mode, `Ctrl-r` and `Ctrl-s` search history, `Ctrl-l` clears the screen, `Ctrl-p` and `Ctrl-n` move through history, and `Ctrl-d` on an empty line exits the shell. In normal mode, `Ctrl-d` otherwise moves down half a page as in Helix, and in insert mode deletes the next character.
+- Tab completes in insert mode, `Ctrl-r` searches history, `Ctrl-l` clears the screen, `Ctrl-p` and `Ctrl-n` move through history, and `Ctrl-d` on an empty line exits the shell. In normal mode, `Ctrl-d` otherwise moves down half a page as in Helix, and in insert mode deletes the next character.
 - Moving up from the first line (`k` or Up) or down from the last line goes to the previous or next history entry, keeping the cursor's column. Set `ZHM_HISTORY_NAVIGATION=0` to turn this off.
 - The text starts out as if it ended with a newline, as files usually do, so the cursor can sit after the last character (`gl`, `x` and `A` all behave as they do on the last line of a file).
 - `:w`, `:x` and `:wq` run the command line, and `:q` abandons it.
@@ -66,6 +70,7 @@ A command line isn't a file, so a few things work differently:
 - `Ctrl-s` (commit undo checkpoint in insert mode) needs flow control turned off with `unsetopt flow_control`, otherwise the terminal intercepts it.
 - `Ctrl-c` and `Ctrl-z` are handled by the terminal (interrupt and suspend), so `Ctrl-c` doesn't toggle comments; use `space c`.
 - Shell commands (`|`, `!` and so on) run with `sh -c`, as in Helix. Set `ZHM_SHELL` to use something else.
+- Keys handled by widgets that aren't part of zshelix (Tab completion, fzf, atuin and so on) aren't recorded in macros or repeated by `.`, since zshelix only sees their effect on the text.
 
 
 ## Configuration
@@ -119,6 +124,8 @@ zhm_bind normal 'C-e' goto_line_end
 zhm_bind insert 'C-a' goto_line_start
 zhm_bind normal 'g a' select_all  # within an existing menu
 ```
+
+`zhm_unbind` removes a binding, e.g. `zhm_unbind normal 'C-a'`.
 
 Every command is also a zle widget called `zhm_<command>`, so `bindkey` works too, e.g. `bindkey -M viins '^E' zhm_goto_line_end_newline`. The keymaps are `zhm-normal`, `zhm-select` and `viins`.
 

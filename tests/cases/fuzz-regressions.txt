@@ -1,4 +1,4 @@
-# Minimised cases found by tests/fuzz.py.
+# Minimised differences found by tests/fuzz.py.
 text: a b c\nd e f\ng h i\n
 a<A-c><esc>
 <A-c><A-c><esc>

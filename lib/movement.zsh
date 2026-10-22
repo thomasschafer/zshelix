@@ -9,7 +9,7 @@
 # {next,prev}_{word,long_word,sub_word}_{start,end}.
 function _zhm_reached_target() {
     local target=$1 p=$2 n=$3
-    local -i pc nc
+    local -i pc=0 nc=0
     _zhm_cat "$p"; pc=$REPLY
     _zhm_cat "$n"; nc=$REPLY
     local boundary=0
@@ -133,7 +133,7 @@ function _zhm_word_move() {
         _zhm_ra=$anchor _zhm_rh=$head
         return
     fi
-    local -i ra rh
+    local -i ra=0 rh=0
     if (( prev )); then
         if (( anchor < head )); then
             (( ra = head, rh = head > 0 ? head - 1 : 0 ))
@@ -205,7 +205,7 @@ function _zhm_pos_at_visual_col() {
     _zhm_line_start $line; pos=$REPLY
     _zhm_line_end $line; end=$REPLY
     while (( pos < end )); do
-        local -i w
+        local -i w=0
         if [[ ${_zhm_chars[pos + 1]} == $'\t' ]]; then
             (( w = ZHM_TAB_WIDTH - col % ZHM_TAB_WIDTH ))
         else
@@ -223,7 +223,7 @@ function _zhm_pos_at_visual_col() {
 typeset -gi _zhm_rcol=-1
 function _zhm_move_vertically() {
     local -i forward=$1 anchor=$2 head=$3 scol=$4 count=$5 extend=$6
-    local -i pos line col nlines new_line
+    local -i pos=0 line=0 col=0 nlines=0 new_line=0
     _zhm_cursor $anchor $head; pos=$REPLY
     _zhm_line_of $pos; line=$REPLY
     if (( scol >= 0 )); then
@@ -268,7 +268,7 @@ function _zhm_line_is_blank() {
 
 function _zhm_move_next_paragraph() {
     local -i anchor=$1 head=$2 count=$3 extend=$4
-    local -i cursor line nlines last_char curr_empty next_empty i last_line
+    local -i cursor=0 line=0 nlines=0 last_char=0 curr_empty=0 next_empty=0 i=0 last_line=0
     _zhm_cursor $anchor $head; cursor=$REPLY
     _zhm_line_of $cursor; line=$REPLY
     nlines=${#_zhm_lines}
@@ -287,13 +287,13 @@ function _zhm_move_next_paragraph() {
         (( line == last_line )) && break
         last_line=$line
     done
-    local -i new_head
+    local -i new_head=0
     if (( line >= nlines )); then
         new_head=$_zhm_len
     else
         _zhm_line_start $line; new_head=$REPLY
     fi
-    local -i new_anchor
+    local -i new_anchor=0
     if (( ! extend )); then
         if (( curr_empty_to_line && last_char )); then
             new_anchor=$head
@@ -309,7 +309,7 @@ function _zhm_move_next_paragraph() {
 
 function _zhm_move_prev_paragraph() {
     local -i anchor=$1 head=$2 count=$3 extend=$4
-    local -i cursor line first_char prev_empty curr_empty i last_line
+    local -i cursor=0 line=0 first_char=0 prev_empty=0 curr_empty=0 i=0 last_line=0
     _zhm_cursor $anchor $head; cursor=$REPLY
     _zhm_line_of $cursor; line=$REPLY
     _zhm_line_start $line
@@ -360,7 +360,7 @@ function _zhm_find_word_boundary() {
     fi
     local -i it=$pos
     while :; do
-        local ch
+        local ch=""
         if (( forward )); then
             (( it < _zhm_len )) || break
             ch=${_zhm_chars[it + 1]}
@@ -434,7 +434,7 @@ function _zhm_textobject_paragraph() {
     _zhm_cursor $anchor $head
     local -i cursor=$REPLY
     _zhm_line_of $cursor; line=$REPLY
-    local -i prev_empty curr_empty next_empty last_char
+    local -i prev_empty=0 curr_empty=0 next_empty=0 last_char=0
     _zhm_line_is_blank $(( line > 0 ? line - 1 : 0 )) && prev_empty=1 || prev_empty=0
     _zhm_line_is_blank $line && curr_empty=1 || curr_empty=0
     if (( line + 1 >= nlines )); then
@@ -488,7 +488,7 @@ typeset -ga _ZHM_PAIRS=( "${_ZHM_BRACKETS[@]}" '"' '"' "'" "'" '`' '`' '|' '|' )
 typeset -g REPLY2
 function _zhm_get_pair() {
     local ch=$1
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_ZHM_PAIRS}; i += 2 )); do
         if [[ ${_ZHM_PAIRS[i]} == "$ch" || ${_ZHM_PAIRS[i + 1]} == "$ch" ]]; then
             REPLY=${_ZHM_PAIRS[i]} REPLY2=${_ZHM_PAIRS[i + 1]}
@@ -499,7 +499,7 @@ function _zhm_get_pair() {
 }
 
 function _zhm_is_open_bracket() {
-    local -i i
+    local -i i=0
     for (( i = 1; i <= ${#_ZHM_BRACKETS}; i += 2 )); do
         [[ ${_ZHM_BRACKETS[i]} == "$1" ]] && return 0
     done
@@ -507,7 +507,7 @@ function _zhm_is_open_bracket() {
 }
 
 function _zhm_is_close_bracket() {
-    local -i i
+    local -i i=0
     for (( i = 2; i <= ${#_ZHM_BRACKETS}; i += 2 )); do
         [[ ${_ZHM_BRACKETS[i]} == "$1" ]] && return 0
     done
@@ -619,7 +619,7 @@ function _zhm_find_nth_pairs_pos() {
             (( pos = REPLY - 1, n = 1 ))
             ;;
     esac
-    local -i op cp
+    local -i op=0 cp=0
     if [[ $open == "$close" ]]; then
         if [[ ${_zhm_chars[pos + 1]} == "$open" ]]; then
             if _zhm_match_bracket_plain $pos; then
@@ -656,7 +656,7 @@ function _zhm_find_nth_closest_pairs() {
     local -i anchor=$1 head=$2 skip=$3
     _zhm_surround_error="Surround pair not found around all cursors"
     local -i from=$(( anchor < head ? anchor : head )) to=$(( anchor < head ? head : anchor ))
-    local -a stack
+    local -a stack=()
     local -i close_pos=$(( from > 0 ? from - 1 : 0 )) i
     for (( i = from; i < _zhm_len; i++ )); do
         (( close_pos++ ))
