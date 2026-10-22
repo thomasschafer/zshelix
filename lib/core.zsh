@@ -394,7 +394,7 @@ function _zhm_map_pos() {
 # Map range ($1, $2) through the single change ($3, $4, $5).
 function _zhm_map_range_one() {
     local -a _zhm_cf=( $3 ) _zhm_ct=( $4 ) _zhm_cx=( "$5" )
-    _zhm_map_reset
+    local -i _zhm_mi=1 _zhm_md=0 _zhm_mlast=0
     _zhm_map_range $1 $2
 }
 

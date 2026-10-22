@@ -433,8 +433,10 @@ function _zhm_cmd_eof_or_page_cursor_half_down() {
     _zhm_cmd_page_cursor_half_down
 }
 
-# zsh's own end-of-file handling (which also respects IGNORE_EOF): on an
-# empty line, delete-char-or-list invoked by Ctrl-d signals end of file.
+# zle itself handles the end-of-file character on an empty line (exiting, or
+# showing the IGNORE_EOF message) before any widget runs, so this only needs
+# to fall back to zsh's normal Ctrl-d behaviour, which also covers a
+# non-default `stty eof`.
 function _zhm_eof() {
     _zhm_clear_highlight
     zle .delete-char-or-list
