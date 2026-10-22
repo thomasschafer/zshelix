@@ -62,6 +62,24 @@ function _zhm_clear_message() {
     _zhm_repaint
 }
 
+# Whether another highlighter's bold entry (such as zsh-syntax-highlighting's)
+# overlaps one of our highlights, which triggers the zsh redraw bug described
+# for _zhm_repaint.
+function _zhm_bold_overlap() {
+    (( ${#_zhm_hl} )) || return 1
+    local entry ours
+    local -i from=0 to=0 of=0 ot=0
+    for entry in "${region_highlight[@]}"; do
+        [[ $entry == *bold* && $entry != *zshelix* ]] || continue
+        from=${entry%% *} to=${${entry#* }%% *}
+        for ours in "${_zhm_hl[@]}"; do
+            of=${ours%% *} ot=${${ours#* }%% *}
+            (( from < ot && of < to + 1 )) && return 0
+        done
+    done
+    return 1
+}
+
 # Make the next redisplay repaint every character of the line. When a message
 # appears or disappears, zsh redraws the line in a way that loses a
 # character's background colour where a bold highlight (as from
@@ -259,6 +277,7 @@ function _zhm_run() {
     fi
     [[ $_zhm_mode == insert ]] || _zhm_history_commit
     _zhm_render
+    _zhm_bold_overlap && _zhm_repaint
     return $ret
 }
 
